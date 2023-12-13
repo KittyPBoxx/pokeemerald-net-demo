@@ -1,0 +1,83 @@
+body {
+    --primaryBackground: #212121;
+    --secondaryBackground: #313131;
+
+    --primaryForground: #bdbdbd;
+
+    --primaryHighlight: #512da8;
+    
+    background: var(--primaryBackground);
+    color: var(--primaryForground);
+    margin: 1em;
+    padding-top: 2em;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+h1 {
+    font-size: 48px !important;
+}
+
+hr {
+    width: 80%;
+}
+
+body img {
+    image-rendering: pixelated;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: crisp-edges;
+}
+
+body .ui.header,
+.ui.card>.content>.header, .ui.cards>.card>.content>.header {
+    color: var(--primaryForground);
+}
+
+.ui.input>input,
+.inverted,
+.ui.input.focus>input, .ui.input>input:focus{
+    background: #1b1c1d !important;
+    color: var(--primaryForground);
+}
+
+.ui.card, 
+.ui.cards>.card, 
+.ui.table,
+.ui.table>thead>tr>th{
+    background: var(--secondaryBackground);
+    color: var(--primaryForground);    
+}
+
+.ui.card.trainer-card {
+    overflow: hidden;
+}
+
+body .ui.input>input:focus {
+    border-color: var(--primaryHighlight);
+}
+
+.species-column {
+    display: flex;
+    justify-content: center;
+    flex-direction: column;
+    align-items: center;
+    gap: 1em;
+}
+
+.ui.avatar.image.pokemon-sprite {
+    width: 5em;
+    height: 5em;
+}
+
+.ui.card.trainer-card, .ui.cards>.card.trainer-card {
+    width: 10em;
+}
+
+.trainer-sprite-info {
+    color: var(--primaryForground);
+}
+
+#egg-sprite {
+    transform: scale(1.5);
+}

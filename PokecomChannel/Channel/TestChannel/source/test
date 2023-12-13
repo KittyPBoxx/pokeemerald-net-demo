@@ -1,0 +1,198 @@
+static void *seriald2 (SerialConnector *connector)
+{
+    SL_resetDeviceType(connector->gcport);
+    SL_resetTransmissionFinished(connector->gcport);
+
+	printf("Waiting for a GBA (via DOL-011) in port %x...\n", connector->gcport);
+
+    int active = 1;    
+	u16 msgBytesCount;
+	u8 pkt[4];
+	u8 i = 0;
+	u8 commResult = 0;
+
+	SI_GetTypeAsync(connector->gcport, SL_getDeviceTypeCallback(connector->gcport));
+
+    while(active) {
+
+        switch (connector->internalState) 
+        {
+
+            case SERIAL_STATE_SEARCHING_FOR_GBA: 
+			{
+                // SI_GBA_BIOS is also covered by this case
+                if (SL_getDeviceType(connector->gcport) & SI_GBA)
+                {
+					printf("GBA Found: Waiting on BIOS\n");
+                    connector->internalState = SERIAL_STATE_INIT;
+                }
+                else if(SL_getDeviceType(connector->gcport) == 0x80 || SL_getDeviceType(connector->gcport) & 8)
+                {
+                    SI_GetTypeAsync(connector->gcport, SL_getDeviceTypeCallback(connector->gcport));
+                    PAD_ScanPads();
+                    VIDEO_WaitVSync();
+                }
+                else
+                {
+                    PAD_ScanPads();
+                    VIDEO_WaitVSync();
+                    usleep(3000000);
+                }
+
+            } break;
+            case SERIAL_STATE_INIT: 
+            {
+				printf("GBA Found: Connected\n");
+
+                SL_reset(connector->gcport);
+				printf("Reset Finished\n");
+
+                commResult = SL_getstatus(connector->gcport, pkt);
+				if (commResult < 0)
+				{
+					connector->internalState = SERIAL_STATE_ERROR;
+				}
+                else if (pkt[2]&SI_STATUS_CONNECTED)
+                {
+					printf("Connection Established\n");
+                    connector->internalState = SERIAL_STATE_WAITING;
+                }
+                else
+                {
+                    VIDEO_WaitVSync();
+                }
+
+            } break;
+            case SERIAL_STATE_WAITING:
+            {
+                commResult = SL_recv(connector->gcport, pkt);
+
+				if (commResult < 0)
+				{
+					connector->internalState = SERIAL_STATE_ERROR;
+				}
+				else if (pkt[0] == SI_WRITE)
+                {
+					memset (connector->receivedMsgBuffer, 0, 1024);
+					msgBytesCount = (u16) (pkt[2] | pkt[3] << 8);
+					printf("Got Cmd %02X %02X %02X %02X\n", pkt[0], 
+					                                        pkt[1],
+															pkt[2],
+															pkt[3]);
+					SL_reset(connector->gcport);
+					printf("Receiving message \n");
+                    connector->internalState = SERIAL_STATE_RECEIVING;
+                }
+                else if (pkt[0] == SI_WRITE)
+                {
+					printf("Sending message \n");
+                    connector->internalState = SERIAL_STATE_SENDING;
+                }
+                else 
+                {
+                    VIDEO_WaitVSync();
+					usleep(100000);
+                }
+
+            } break;
+            case SERIAL_STATE_SENDING:
+            {
+                commResult = SL_send(connector->gcport, 0x15);
+                connector->requestSend = 0;
+                connector->internalState = SERIAL_STATE_WAITING;
+            } break;
+            case SERIAL_STATE_RECEIVING:
+            {
+				if (msgBytesCount > MAX_MSG_SIZE)
+				{
+					printf("Skipping message too long %x \n", msgBytesCount);
+					return NULL;
+				}
+
+				memset(connector->receivedMsgBuffer,0,MAX_MSG_SIZE);
+
+				for(i = 0; i <= msgBytesCount - 1; i+=4)
+				{
+					if (i > 0)
+					{
+						// Timeing can be quite precise so we give a generous delay to avoid duplicate messages
+						usleep(250);
+					}
+
+					commResult = SL_recv(connector->gcport, pkt);
+					printf("Read %x %02X %02X %02X %02X\n", i,
+					                                        pkt[0], 
+					                                        pkt[1],
+															pkt[2],
+															pkt[3]);
+
+					if (i <= MAX_MSG_SIZE)
+						connector->receivedMsgBuffer[i]     =  pkt[0];
+
+					if (i + 1 <= MAX_MSG_SIZE)
+						connector->receivedMsgBuffer[i + 1] =  pkt[1];
+
+					if (i + 2 <= MAX_MSG_SIZE)
+						connector->receivedMsgBuffer[i + 2] =  pkt[2];
+
+					if (i + 3 <= MAX_MSG_SIZE)
+						connector->receivedMsgBuffer[i + 3] =  pkt[3];
+
+					if (commResult < 0)
+					{
+						msgBytesCount = 0;
+					}
+
+				}
+                
+				if (connector->receivedMsgBuffer[0] != 0)
+				{
+					printf("Got Msg %02X %02X %02X %02X %02X %02X %02X %02X\n", connector->receivedMsgBuffer[0], 
+					                                                            connector->receivedMsgBuffer[1],
+																				connector->receivedMsgBuffer[2],
+																				connector->receivedMsgBuffer[3],
+																				connector->receivedMsgBuffer[4],
+																				connector->receivedMsgBuffer[5],
+																				connector->receivedMsgBuffer[6],
+																				connector->receivedMsgBuffer[7]);
+				}
+
+
+				if (commResult < 0)
+				{
+					connector->internalState = SERIAL_STATE_ERROR;
+				}
+				else
+				{
+					connector->requestReceive = 1;
+					connector->internalState = SERIAL_STATE_WAITING;
+				}
+
+            } break;
+            case SERIAL_STATE_DONE:
+            {
+              connector->internalState = SERIAL_STATE_SEARCHING_FOR_GBA;
+              active = 0;
+            } break;
+			case SERIAL_STATE_ERROR:
+            {
+			  printf("Connection Error Resetting...\n");	
+			  SL_resetDeviceType(connector->gcport);
+    		  SL_resetTransmissionFinished(connector->gcport);
+		      i = 0;
+			  pkt[0] = 0;
+			  pkt[1] = 0;
+			  pkt[2] = 0;
+			  pkt[3] = 0;
+			  commResult = 0;
+			  SI_GetTypeAsync(connector->gcport, SL_getDeviceTypeCallback(connector->gcport));
+              connector->internalState = SERIAL_STATE_SEARCHING_FOR_GBA;
+            } break;
+            
+
+        }
+
+    }
+
+   return NULL;
+}

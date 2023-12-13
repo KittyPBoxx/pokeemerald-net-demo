@@ -1,0 +1,451 @@
+<html>
+    <head>
+        <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+        <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/fomantic-ui@2.9.3/dist/semantic.min.css">
+        <script src="https://cdn.jsdelivr.net/npm/fomantic-ui@2.9.3/dist/semantic.min.js"></script>
+        <script src="ui.js" defer></script>
+        <link rel="stylesheet" type="text/css" href="styles.css">
+    </head>
+    <body>
+        <h1 class="ui header">Celio Server Config</h1>
+        <hr/>
+        <br>
+        <br>
+        <!-- Section: Client List -->
+        <h2 id="connectedPlayersTitle" class="ui header">Player List - 0 Connected</h2>
+        <table class="ui celled table">
+            <thead>
+                <th>Name</th>
+                <th>Trainer ID</th>
+                <th>Game</th>
+                <th>Gender</th>
+                <th>Last Sent Mail</th>
+            </thead> 
+            <tbody id="connectedPlayersBody">
+            </tbody> 
+        </table>    
+        <button class="ui secondary button" onclick="refreshClientList()">
+            Refresh Clients
+        </button>
+        <br>
+        <hr/>
+        <!-- Section: Battle Editor -->
+        <h2 class="ui header">Battle Editor</h2>
+        <div class="ui card trainer-card">
+            <div class="image">
+              <img src="https://play.pokemonshowdown.com/sprites/trainers/brendan-gen3rs.png">
+            </div>
+            <div class="content">
+              <span class="header">NET</span>
+              <div class="meta">
+                <span class="trainer-sprite-info">Sprite Brendan (R/S)</span>
+              </div>
+            </div>
+        </div>
+        <table class="ui celled table">
+            <thead>
+                <tr>
+                    <th>Species</th>
+                    <th>Nickname</th>
+                    <th>Level</th>
+                    <th>Held Item</th>
+                    <th>Move 1</th>
+                    <th>Move 2</th>
+                    <th>Move 3</th>
+                    <th>Move 4</th>
+                </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td data-label="Species">
+                    <div class="species-column">
+                    <img id="mon1-sprite" class="ui avatar image pokemon-sprite" src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/129.png">
+                    <div class="ui fluid search selection dropdown inverted transparent">
+                        <input id="mon1-species" type="hidden" value="129" name="species1" onchange="updateSprite(this, 'mon1-sprite')">
+                        <i class="dropdown icon"></i>
+                        <div class="default text">Select Species</div>
+                        <div class="menu" data-autofill="species"></div>
+                    </div>
+                    </div>
+                </td>
+                <td data-label="Nickname">
+                    <div class="species-column">
+                    <div class="ui avatar image pokemon-sprite"></div>
+                    <div class="ui input inverted">
+                    <input id="mon1-nickname" type="text" maxlength="3" placeholder="Nickname" value="Bob">
+                    </div>
+                    </div>
+                </td>
+                <td data-label="Level">
+                    <div class="species-column">
+                        <div class="ui avatar image pokemon-sprite"></div>
+                        <div class="ui input inverted">
+                          <input id="mon1-level" type="number" placeholder="Level" value="10" min="1" max="100">
+                        </div>
+                    </div>
+                </td>
+                <td data-label="Held_Item">
+                    <div class="species-column">
+                    <img id="item1-sprite" class="ui avatar image pokemon-sprite" src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/leftovers.png">
+                    <div class="ui fluid search selection dropdown inverted transparent">
+                        <input id="mon1-item" type="hidden" value="129" name="1item" value="LEFTOVERS" onchange="updateItemSprite(this, 'item1-sprite')">
+                        <i class="dropdown icon"></i>
+                        <div class="default text">LEFTOVERS</div>
+                        <div class="menu" data-autofill="battleItems"></div>
+                    </div>
+                    </div>
+                </td>
+                <td data-label="Move_1">
+                    <div class="species-column">
+                        <div class="ui avatar image pokemon-sprite"></div>
+                        <div class="ui fluid search selection dropdown inverted transparent">
+                            <input id="mon1-move1" type="hidden" value="150" name="1move1">
+                            <i class="dropdown icon"></i>
+                            <div class="default text">Move 1</div>
+                            <div class="menu" data-autofill="moves"></div>
+                        </div>
+                      </div>
+                </td>
+                <td data-label="Move_2">
+                    <div class="species-column">
+                        <div class="ui avatar image pokemon-sprite"></div>
+                        <div class="ui fluid search selection dropdown inverted transparent">
+                            <input id="mon1-move2" type="hidden" value="0" name="1move2">
+                            <i class="dropdown icon"></i>
+                            <div class="default text">Move 2</div>
+                            <div class="menu" data-autofill="moves"></div>
+                        </div>
+                      </div>
+                </td>
+                <td data-label="Move_3">
+                    <div class="species-column">
+                        <div class="ui avatar image pokemon-sprite"></div>
+                        <div class="ui fluid search selection dropdown inverted transparent">
+                            <input id="mon1-move3" type="hidden" value="0" name="1move3">
+                            <i class="dropdown icon"></i>
+                            <div class="default text">Move 3</div>
+                            <div class="menu" data-autofill="moves"></div>
+                        </div>
+                      </div>
+                </td>
+                <td data-label="Move_4">
+                    <div class="species-column">
+                        <div class="ui avatar image pokemon-sprite"></div>
+                        <div class="ui fluid search selection dropdown inverted transparent">
+                            <input id="mon1-move4" type="hidden" value="0" name="1move4">
+                            <i class="dropdown icon"></i>
+                            <div class="default text">Move 4</div>
+                            <div class="menu" data-autofill="moves"></div>
+                        </div>
+                      </div>
+                </td>
+              </tr>
+
+              <tr>
+                <td data-label="Species">
+                    <div class="species-column">
+                    <img id="mon2-sprite" class="ui avatar image pokemon-sprite" src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/0.png">
+                    <div class="ui fluid search selection dropdown inverted transparent">
+                        <input id="mon2-species" type="hidden" value="0" name="species2" onchange="updateSprite(this, 'mon2-sprite')">
+                        <i class="dropdown icon"></i>
+                        <div class="default text">Select Species</div>
+                        <div class="menu" data-autofill="species"></div>
+                    </div>
+                    </div>
+                </td>
+                <td data-label="Nickname">
+                    <div class="species-column">
+                    <div class="ui avatar image pokemon-sprite"></div>
+                    <div class="ui input inverted">
+                    <input id="mon2-nickname" type="text" maxlength="3" placeholder="Nickname" value="Jim">
+                    </div>
+                    </div>
+                </td>
+                <td data-label="Level">
+                    <div class="species-column">
+                        <div class="ui avatar image pokemon-sprite"></div>
+                        <div class="ui input inverted">
+                          <input id="mon2-level" type="number" placeholder="Level" value="1" min="1" max="100">
+                        </div>
+                    </div>
+                </td>
+                <td data-label="Held_Item">
+                    <div class="species-column">
+                    <img id="item2-sprite" class="ui avatar image pokemon-sprite" src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/0.png">
+                    <div class="ui fluid search selection dropdown inverted transparent">
+                        <input id="mon2-item" type="hidden" value="0" name="1item" value="LEFTOVERS" onchange="updateItemSprite(this, 'item2-sprite')">
+                        <i class="dropdown icon"></i>
+                        <div class="default text">Select Item</div>
+                        <div class="menu" data-autofill="battleItems"></div>
+                    </div>
+                    </div>
+                </td>
+                <td data-label="Move_1">
+                    <div class="species-column">
+                        <div class="ui avatar image pokemon-sprite"></div>
+                        <div class="ui fluid search selection dropdown inverted transparent">
+                            <input id="mon2-move1" type="hidden" value="0" name="2move1">
+                            <i class="dropdown icon"></i>
+                            <div class="default text">Move 1</div>
+                            <div class="menu" data-autofill="moves"></div>
+                        </div>
+                      </div>
+                </td>
+                <td data-label="Move_2">
+                    <div class="species-column">
+                        <div class="ui avatar image pokemon-sprite"></div>
+                        <div class="ui fluid search selection dropdown inverted transparent">
+                            <input id="mon2-move2" type="hidden" value="0" name="2move2">
+                            <i class="dropdown icon"></i>
+                            <div class="default text">Move 2</div>
+                            <div class="menu" data-autofill="moves"></div>
+                        </div>
+                      </div>
+                </td>
+                <td data-label="Move_3">
+                    <div class="species-column">
+                        <div class="ui avatar image pokemon-sprite"></div>
+                        <div class="ui fluid search selection dropdown inverted transparent">
+                            <input id="mon2-move3" type="hidden" value="0" name="2move3">
+                            <i class="dropdown icon"></i>
+                            <div class="default text">Move 3</div>
+                            <div class="menu" data-autofill="moves"></div>
+                        </div>
+                      </div>
+                </td>
+                <td data-label="Move_4">
+                    <div class="species-column">
+                        <div class="ui avatar image pokemon-sprite"></div>
+                        <div class="ui fluid search selection dropdown inverted transparent">
+                            <input id="mon2-move4" type="hidden" value="0" name="2move4">
+                            <i class="dropdown icon"></i>
+                            <div class="default text">Move 4</div>
+                            <div class="menu" data-autofill="moves"></div>
+                        </div>
+                      </div>
+                </td>
+              </tr>
+
+              <tr>
+                <td data-label="Species">
+                    <div class="species-column">
+                    <img id="mon3-sprite" class="ui avatar image pokemon-sprite" src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/0.png">
+                    <div class="ui fluid search selection dropdown inverted transparent">
+                        <input id="mon3-species" type="hidden" value="0" name="species3" onchange="updateSprite(this, 'mon3-sprite')">
+                        <i class="dropdown icon"></i>
+                        <div class="default text">Select Item</div>
+                        <div class="menu" data-autofill="species"></div>
+                    </div>
+                    </div>
+                </td>
+                <td data-label="Nickname">
+                    <div class="species-column">
+                    <div class="ui avatar image pokemon-sprite"></div>
+                    <div class="ui input inverted">
+                    <input id="mon3-nickname" type="text" maxlength="3" placeholder="Nickname" value="Amy">
+                    </div>
+                    </div>
+                </td>
+                <td data-label="Level">
+                    <div class="species-column">
+                        <div class="ui avatar image pokemon-sprite"></div>
+                        <div class="ui input inverted">
+                          <input id="mon3-level" type="number" placeholder="Level" value="1" min="1" max="100">
+                        </div>
+                    </div>
+                </td>
+                <td data-label="Held_Item">
+                    <div class="species-column">
+                    <img id="item3-sprite" class="ui avatar image pokemon-sprite" src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/0.png">
+                    <div class="ui fluid search selection dropdown inverted transparent">
+                        <input id="mon3-item" type="hidden" value="0" name="1item" value="LEFTOVERS" onchange="updateItemSprite(this, 'item3-sprite')">
+                        <i class="dropdown icon"></i>
+                        <div class="default text">Select Item</div>
+                        <div class="menu" data-autofill="battleItems"></div>
+                    </div>
+                    </div>
+                </td>
+                <td data-label="Move_1">
+                    <div class="species-column">
+                        <div class="ui avatar image pokemon-sprite"></div>
+                        <div class="ui fluid search selection dropdown inverted transparent">
+                            <input id="mon3-move1" type="hidden" value="0" name="3move1">
+                            <i class="dropdown icon"></i>
+                            <div class="default text">Move 1</div>
+                            <div class="menu" data-autofill="moves"></div>
+                        </div>
+                      </div>
+                </td>
+                <td data-label="Move_2">
+                    <div class="species-column">
+                        <div class="ui avatar image pokemon-sprite"></div>
+                        <div class="ui fluid search selection dropdown inverted transparent">
+                            <input id="mon3-move2" type="hidden" value="0" name="3move2">
+                            <i class="dropdown icon"></i>
+                            <div class="default text">Move 2</div>
+                            <div class="menu" data-autofill="moves"></div>
+                        </div>
+                      </div>
+                </td>
+                <td data-label="Move_3">
+                    <div class="species-column">
+                        <div class="ui avatar image pokemon-sprite"></div>
+                        <div class="ui fluid search selection dropdown inverted transparent">
+                            <input id="mon3-move3" type="hidden" value="0" name="3move3">
+                            <i class="dropdown icon"></i>
+                            <div class="default text">Move 3</div>
+                            <div class="menu" data-autofill="moves"></div>
+                        </div>
+                      </div>
+                </td>
+                <td data-label="Move_4">
+                    <div class="species-column">
+                        <div class="ui avatar image pokemon-sprite"></div>
+                        <div class="ui fluid search selection dropdown inverted transparent">
+                            <input id="mon3-move4" type="hidden" value="0" name="3move4">
+                            <i class="dropdown icon"></i>
+                            <div class="default text">Move 4</div>
+                            <div class="menu" data-autofill="moves"></div>
+                        </div>
+                      </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <button class="ui secondary button" onclick="updateTrainer()">
+            Update Trainer
+          </button>
+          <br>
+          <hr/>
+          <!-- Section: Mart Editor -->
+          <h2 class="ui header">Mart Editor</h2>
+          <table class="ui celled table">
+            <thead>
+                <tr>
+                    <th>Item 1</th>
+                    <th>Item 2</th>
+                    <th>Item 3</th>
+                    <th>Item 4</th>
+                    <th>Item 5</th>
+                    <th>Item 6</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                  <td data-label="Held_Item">
+                      <div class="species-column">
+                      <img id="mart-item1-sprite" class="ui avatar image pokemon-sprite" src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/premier-ball.png">
+                      <div class="ui fluid search selection dropdown inverted transparent">
+                          <input id="mart1-item" type="hidden" value="12" name="m1item" value="PREMIER BALL" onchange="updateItemSprite(this, 'mart-item1-sprite')">
+                          <i class="dropdown icon"></i>
+                          <div class="default text">PREMIER BALL</div>
+                          <div class="menu" data-autofill="items"></div>
+                      </div>
+                      </div>
+                  </td>
+                  <td data-label="Held_Item">
+                    <div class="species-column">
+                    <img id="mart-item2-sprite" class="ui avatar image pokemon-sprite" src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/berry-juice.png">
+                    <div class="ui fluid search selection dropdown inverted transparent">
+                        <input id="mart2-item" type="hidden" value="44" name="m2item" value="BERRY JUICE" onchange="updateItemSprite(this, 'mart-item2-sprite')">
+                        <i class="dropdown icon"></i>
+                        <div class="default text">BERRY JUICE</div>
+                        <div class="menu" data-autofill="items"></div>
+                    </div>
+                    </div>
+                </td>
+                <td data-label="Held_Item">
+                    <div class="species-column">
+                    <img id="mart-item3-sprite" class="ui avatar image pokemon-sprite" src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/enigma-berry.png">
+                    <div class="ui fluid search selection dropdown inverted transparent">
+                        <input id="mart3-item" type="hidden" value="175" name="m3item" value="ENIGMA BERRY" onchange="updateItemSprite(this, 'mart-item3-sprite')">
+                        <i class="dropdown icon"></i>
+                        <div class="default text">ENIGMA BERRY</div>
+                        <div class="menu" data-autofill="items"></div>
+                    </div>
+                    </div>
+                </td>
+                <td data-label="Held_Item">
+                    <div class="species-column">
+                    <img id="mart-item4-sprite" class="ui avatar image pokemon-sprite" src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/tm-normal.png">
+                    <div class="ui fluid search selection dropdown inverted transparent">
+                        <input id="mart4-item" type="hidden" value="331" name="m4item" value="TM43" onchange="updateItemSprite(this, 'mart-item4-sprite')">
+                        <i class="dropdown icon"></i>
+                        <div class="default text">TM43</div>
+                        <div class="menu" data-autofill="items"></div>
+                    </div>
+                    </div>
+                </td>
+                <td data-label="Held_Item">
+                    <div class="species-column">
+                    <img id="mart-item5-sprite" class="ui avatar image pokemon-sprite" src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/helix-fossil.png">
+                    <div class="ui fluid search selection dropdown inverted transparent">
+                        <input id="mart5-item" type="hidden" value="357" name="m5item" value="HELIX FOSSIL" onchange="updateItemSprite(this, 'mart-item5-sprite')">
+                        <i class="dropdown icon"></i>
+                        <div class="default text">HELIX FOSSIL</div>
+                        <div class="menu" data-autofill="items"></div>
+                    </div>
+                    </div>
+                </td>
+                <td data-label="Held_Item">
+                    <div class="species-column">
+                    <img id="mart-item6-sprite" class="ui avatar image pokemon-sprite" src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/old-sea-map.png">
+                    <div class="ui fluid search selection dropdown inverted transparent">
+                        <input id="mart6-item" type="hidden" value="376" name="m6item" value="OLD SEA MAP" onchange="updateItemSprite(this, 'mart-item6-sprite')">
+                        <i class="dropdown icon"></i>
+                        <div class="default text">OLD SEA MAP</div>
+                        <div class="menu" data-autofill="items"></div>
+                    </div>
+                    </div>
+                </td>
+                </tr>
+            </tbody>
+          </table>
+          <button class="ui secondary button" onclick="updateMart()">
+            Update Mart
+          </button>
+          <br>
+          <hr/>
+          <!-- Section: Gift Egg Editor -->
+          <h2 class="ui header">Gift Egg Editor</h2>
+          <table class="ui celled table">
+            <thead>
+                <tr>
+                    <th>Gift Egg</th>
+                    <th>Special Move</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                  <td data-label="Species">
+                      <div class="species-column">
+                      <img id="egg-sprite" class="ui avatar image pokemon-sprite" src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/175.png">
+                      <div class="ui fluid search selection dropdown inverted transparent">
+                          <input id="egg-species" type="hidden" value="175" name="egg-species" onchange="updateSprite(this, 'egg-sprite')">
+                          <i class="dropdown icon"></i>
+                          <div class="default text">Select Species</div>
+                          <div class="menu" data-autofill="species"></div>
+                      </div>
+                      </div>
+                  </td>
+                  <td data-label="Move_1">
+                    <div class="species-column">
+                        <div class="ui avatar image pokemon-sprite"></div>
+                        <div class="ui fluid search selection dropdown inverted transparent">
+                            <input id="egg-move" type="hidden" value="57" name="eggMove">
+                            <i class="dropdown icon"></i>
+                            <div class="default text">Special Move</div>
+                            <div class="menu" data-autofill="moves"></div>
+                        </div>
+                      </div>
+                </td>
+                </tr>
+            </tbody>
+          </table>
+          <button class="ui secondary button" onclick="updateGiftEgg()">
+            Update Gift Egg
+          </button>
+          <br>
+          <hr/>
+    </body>
+</html>

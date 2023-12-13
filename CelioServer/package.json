@@ -1,0 +1,16 @@
+{
+  "name": "celioserver",
+  "version": "1.0.0",
+  "description": "Server for the wii to connect to with LanetteConnect",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "kittypboxx",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.18.2",
+    "express-basic-auth": "^1.2.1"
+  }
+}
