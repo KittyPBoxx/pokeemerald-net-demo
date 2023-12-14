@@ -91,3 +91,6 @@ pokeemerald/**/*.diff
 pokeemerald/**/*.sym
 pokeemerald/**/*.js
 pokeemerald/**/*.sav
+
+pokeemerald/.git
+pokeemerald/.github
