@@ -22,6 +22,7 @@ TODO: as there are no in-date instructions on these tools I should probably make
 # Licence 
 
 The Pokecom Channel uses libgui 1.06 (https://github.com/dborth/libwiigui) and is therefore licenced under GPL-3. 
+
 The NoUITestChannel shares the MIT licence with the other projects.
 
 # Resource Attribution
