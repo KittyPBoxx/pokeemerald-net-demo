@@ -1,0 +1,56 @@
+### Main ###
+msgid "main.title"
+msgstr "Pokecom Channel"
+msgid "main.network"
+msgstr "Configure Network"
+msgid "main.exit"
+msgstr "Exit"
+
+### Network Config Page ###
+msgid "network.title"
+msgstr "Pokecom Channel - Configure Network"
+msgid "network.back"
+msgstr "Go Back"
+msgid "network.test"
+msgstr "Test Connection"
+msgid "network.prompt"
+msgstr "Enter IPv4 Address + Port:"
+
+### Exit Popup ###
+msgid "quit.title"
+msgstr "Close Channel"
+msgid "quit.msg"
+msgstr "All devices will disconnect. Are you sure you want to quit?"
+msgid "quit.yes"
+msgstr "Yes"
+msgid "quit.no"
+msgstr "No"
+
+### Network Test Popup ###
+msgid "networkTest.title"
+msgstr "Connection Test"
+msgid "networkTest.close"
+msgstr "Close"
+msgid "networkTest.attemptingConnection"
+msgstr "Attempting to connect..."
+msgid "networkTest.CONNECTION_READY"
+msgstr "Attempting to connect..."
+msgid "networkTest.CONNECTION_ERROR_INVALID_IP"
+msgstr "IP Invalid (Expecting xxx.xxx.xxx.xxx)"
+msgid "networkTest.CONNECTION_ERROR_NO_NETWORK_DEVICE"
+msgstr "No network device found (i.e no wifi or ethernet)."
+msgid "networkTest.CONNECTION_ERROR_CONNECTION_FAILED"
+msgstr "Could not reach server."
+msgid "networkTest.CONNECTION_ERROR_INVALID_RESPONSE"
+msgstr "Unrecognised response from server: "
+msgid "networkTest.CONNECTION_SUCCESS"
+msgstr "Successful connection made to "
+
+### Connections GUI ###
+msgid "connectionsUI.noServer"
+msgstr "No Server Configured"
+msgid "connectionsUI.playerWaiting"
+msgstr "Waiting..."
+msgid "connectionsUI.connectInstructions"
+msgstr "Connect your GBA to the Wii. Then turn it on."
+

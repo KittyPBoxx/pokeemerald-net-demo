@@ -4,7 +4,7 @@ node_modules
 **/*.d
 **/*.map
 
-PokecomChannel/**/build/
+PokecomChannel/**/build/*
 
 pokeemerald/*.exe
 pokeemerald/*.o
