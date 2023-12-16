@@ -7,6 +7,7 @@ public:
 	GuiGbaConnections(char * serverName);
 	~GuiGbaConnections();
     void Draw();
+    void ConnectPlayer(int player);
 	void Update(GuiTrigger * t);
 protected:
     void HidePlayerTag(int playerNo);

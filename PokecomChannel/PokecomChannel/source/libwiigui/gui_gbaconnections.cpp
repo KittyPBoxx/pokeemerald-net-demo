@@ -122,7 +122,7 @@ GuiGbaConnections::GuiGbaConnections(char * serverName)
     globeImg->SetParent(this);
 
 
-    if(serverName[0] == '\0') 
+    if(serverName[0] == '\0' || strcmp(serverName,gettext("connectionsUI.noServer")) == 0) 
 	{
         strcpy( serverName, gettext("connectionsUI.noServer"));
         serverTagText = new GuiText(serverName, 14, (GXColor){255, 195, 0, 0xff});
@@ -147,6 +147,11 @@ GuiGbaConnections::GuiGbaConnections(char * serverName)
     instructionsText->SetParent(globeImg);
     instructionsText->SetEffect(EFFECT::PLUSE, -3, 100);
 
+}
+
+void GuiGbaConnections::ConnectPlayer(int player) 
+{
+    instructionsText->SetVisible(false);
 }
 
 void GuiGbaConnections::Draw()

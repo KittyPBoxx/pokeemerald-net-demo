@@ -1,7 +1,7 @@
 {
   "name": "celioserver",
   "version": "1.0.0",
-  "description": "Server for the wii to connect to with LanetteConnect",
+  "description": "Server for the wii to connect to with the pokecom channel",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",

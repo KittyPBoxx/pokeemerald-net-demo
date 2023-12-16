@@ -54,3 +54,9 @@ msgstr "Waiting..."
 msgid "connectionsUI.connectInstructions"
 msgstr "Connect your GBA to the Wii. Then turn it on."
 
+### Debug Menu ###
+msgid "debug.title"
+msgstr "Debug/Logs"
+msgid "debug.back"
+msgstr "Go Back"
+

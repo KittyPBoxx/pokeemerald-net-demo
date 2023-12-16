@@ -8,14 +8,19 @@
 
 #include <linkcableclient.h>
 #include <seriallink.h>
+#include <pokestring.h>
+#include "tcpclient.h"
+
+static void *seriald (SerialConnector *connector); //!<  Function that handles the connection loop
 
 /**
 * Constructor for the GuiSound class.
 * !\param gcport an number from 0-3 corrisponding to the game cube ports on the wii
 */
-LinkCableClient::LinkCableClient(u8 gcport)
+LinkCableClient::LinkCableClient(u8 gcport, Logger * LOGGER)
 {
     this->connector.gcport = gcport;
+	this->connector.LOGGER = LOGGER;
 }
 
 /**
@@ -27,6 +32,9 @@ LinkCableClient::~LinkCableClient()
 
 void LinkCableClient::Start()
 {
+	this->connector.LOGGER->Log((char *) "Starting link");
+
+
     this->connector.requestSend = 0;
     this->connector.requestReceive = 0;
     this->connector.requestStop = 0;
@@ -41,43 +49,38 @@ void LinkCableClient::Start()
 					 50				             /* thread priority */ );
 }
 
-// void LinkCableClient::SerialSend()
-// {
-    
-// }
-
-// void LinkCableClient::SerialReceive()
-// {
-    
-// }
-
-// void LinkCableClient::GetConnectionResult()
-// {
-    
-// }
-
-// void LinkCableClient::GetConnectionResult()
-// {
-    
-// }
-
-// void LinkCableClient::SerialReset()
-// {
-    
-// }
-
-// void LinkCableClient::SerialStatus()
-// {
-    
-// }
+u8 LinkCableClient::GetConnectionResult() 
+{
+	return this->connector.connectionResult;
+}
 
 static void *seriald (SerialConnector *connector)
 {
+	connector->LOGGER->Log((char *) "Searching For GBA on port 1");
+
     SL_resetDeviceType(connector->gcport);
     SL_resetTransmissionFinished(connector->gcport);
-    int active = 1;
 
-    SI_GetTypeAsync(connector->gcport, SL_getDeviceTypeCallback(connector->gcport));
+    connector->requestSend = 0;
+    connector->requestReceive = 0;
+    connector->requestStop = 0;
+	connector->internalState = SERIAL_STATE_SEARCHING_FOR_GBA;
+	connector->connectionResult = CONNECTION_NO_GBA;
+
+    TCPClient* tcpClient = new TCPClient();
+
+    char ipv4Port[32] = "127.0.0.1:9000";
+	tcpClient->connector.remoteAddressAndPort = ipv4Port;
+	tcpClient->connector.serialConnector = connector;
+
+    int active = 1;    
+	u16 msgBytesCount = 0;
+	u8 pkt[4];
+	int commResult = 0;
+	u16 msgCheckBytes = 0xFFFF;
+	u16 msgBytesOffset = 0;
+
+	SI_GetTypeAsync(connector->gcport, SL_getDeviceTypeCallback(connector->gcport));
 
     while(active) {
 
@@ -86,15 +89,16 @@ static void *seriald (SerialConnector *connector)
 
             case SERIAL_STATE_SEARCHING_FOR_GBA: 
 			{
+				connector->LOGGER->Log((char *) "Searching For A GBA");
                 // SI_GBA_BIOS is also covered by this case
                 if (SL_getDeviceType(connector->gcport) & SI_GBA)
                 {
-                    connector->receivedMsgBuffer[2] = 0; // Reset status byte
+					connector->LOGGER->Log((char *) "Found A GBA");
+					connector->connectionResult = CONNECTION_STARTING;
                     connector->internalState = SERIAL_STATE_INIT;
                 }
                 else if(SL_getDeviceType(connector->gcport) == 0x80 || SL_getDeviceType(connector->gcport) & 8)
                 {
-                    
                     SI_GetTypeAsync(connector->gcport, SL_getDeviceTypeCallback(connector->gcport));
                     PAD_ScanPads();
                     VIDEO_WaitVSync();
@@ -103,17 +107,24 @@ static void *seriald (SerialConnector *connector)
                 {
                     PAD_ScanPads();
                     VIDEO_WaitVSync();
-                    usleep(3000000); // If there's nothing in the port only check for changes every 3 seconds
+                    usleep(3000000);
                 }
 
             } break;
             case SERIAL_STATE_INIT: 
             {
-                SL_reset(connector->gcport, connector->sendMsgBuffer, connector->receivedMsgBuffer);
-                SL_getstatus(connector->gcport, connector->sendMsgBuffer, connector->receivedMsgBuffer);
-                
-                if (connector->receivedMsgBuffer[2]&SI_STATUS_CONNECTED)
+				connector->LOGGER->Log((char *) "INIT");
+
+                SL_reset(connector->gcport);
+
+                commResult = SL_getstatus(connector->gcport, pkt);
+				if (commResult < 0)
+				{
+					connector->internalState = SERIAL_STATE_ERROR;
+				}
+                else if (pkt[2]&SI_STATUS_CONNECTED)
                 {
+					connector->connectionResult = CONNECTION_CONNECTED;
                     connector->internalState = SERIAL_STATE_WAITING;
                 }
                 else
@@ -124,42 +135,281 @@ static void *seriald (SerialConnector *connector)
             } break;
             case SERIAL_STATE_WAITING:
             {
-                if (connector->requestSend == 1)
+                commResult = SL_recv(connector->gcport, pkt);
+
+				if (commResult < 0)
+				{
+					connector->internalState = SERIAL_STATE_ERROR;
+				}
+				else if (NET_CONN_SEND_ANY == pkt[1] && pkt[0] < (MAX_MSG_SIZE/VIRTUAL_CHANNEL_SIZE)) // We are reciving data from the GBA
                 {
-                    connector->internalState = SERIAL_STATE_SENDING;
-                }
-                else if (connector->requestReceive == 1)
-                {
+					msgBytesCount = (u16) (pkt[2] | pkt[3] << 8);
+
+					msgBytesOffset = pkt[0] * VIRTUAL_CHANNEL_SIZE;
+					
+					msgCheckBytes = 0xFFFF;
+					msgCheckBytes ^= (u16) (pkt[0] | pkt[1] << 8);
+					msgCheckBytes ^= (u16) (pkt[2] | pkt[3] << 8);
+					
+					SL_reset(connector->gcport);
                     connector->internalState = SERIAL_STATE_RECEIVING;
                 }
-                else if (connector->requestStop == 1)
+                else if (NET_CONN_RECV_ANY == pkt[1] && pkt[0] < (MAX_MSG_SIZE/VIRTUAL_CHANNEL_SIZE))  // We are sending data to the GBA
                 {
-                    connector->internalState = SERIAL_STATE_DONE;
+					msgBytesCount = (u16) (pkt[2] | pkt[3] << 8);
+
+					msgBytesOffset = pkt[0] * VIRTUAL_CHANNEL_SIZE;
+					
+					SL_reset(connector->gcport);
+                    connector->internalState = SERIAL_STATE_SENDING;
                 }
+				else if ((u16) (pkt[1] | pkt[0] << 8) == NET_CONN_BCLR_REQ)
+				{
+					memset(connector->receivedMsgBuffer,0,MAX_MSG_SIZE);
+					usleep(1000);
+				}
+				else if (NET_CONN_PINF_REQ == (u16) (pkt[0] | pkt[1] << 8))
+				{
+					msgCheckBytes = 0xFFFF;
+					msgCheckBytes ^= (u16) (pkt[0] | pkt[1] << 8);
+					msgCheckBytes ^= (u16) (pkt[2] | pkt[3] << 8);
+
+
+					if (validatePokeStringMsg(connector->receivedMsgBuffer, 0, 8))
+					{
+						bytesToChars(connector->receivedMsgBuffer, 0, 8);
+
+						for (int i = 0; i < 8; i++) 
+							connector->playerData.playerName[i] = connector->receivedMsgBuffer[i];
+
+
+						if (connector->receivedMsgBuffer[8] % 2 == 0)
+						{
+							connector->playerData.gender = 0;
+						}
+						else 
+						{
+							connector->playerData.gender = 1;
+						}
+
+						connector->playerData.trainerId = (u16) (connector->receivedMsgBuffer[10] + (connector->receivedMsgBuffer[11] << 8));
+
+					}
+
+					if (validatePokeStringMsg(connector->receivedMsgBuffer, 32, 20))
+					{
+						bytesToChars(connector->receivedMsgBuffer, 32, 20);
+
+						for (int i = 0; i < 20; i++) 
+							connector->playerData.gameName[i] = connector->receivedMsgBuffer[32+i];
+
+					}
+
+					SL_send(connector->gcport, (u32) (NET_CONN_CHCK_RES << 16) | (msgCheckBytes & 0xFFFF));
+					usleep(1000);
+				}
+				else if (NET_CONN_CINF_REQ == (u16) (pkt[0] | pkt[1] << 8))
+				{
+					msgCheckBytes = 0xFFFF;
+					msgCheckBytes ^= (u16) (pkt[0] | pkt[1] << 8);
+					msgCheckBytes ^= (u16) (pkt[2] | pkt[3] << 8);
+
+					if (validatePokeStringMsg(connector->receivedMsgBuffer, 0, msgBytesCount))
+					{
+						bytesToChars(connector->receivedMsgBuffer, 0, msgBytesCount);
+						connector->receivedMsgBuffer[msgBytesCount + 1]  = '\0'; // Make sure the string is actually terminated
+                        memset(ipv4Port, 0, sizeof ipv4Port);
+                        strcpy(ipv4Port, connector->receivedMsgBuffer);
+						tcpClient->Connect(ipv4Port);
+					}
+
+					SL_send(connector->gcport, (u32) (NET_CONN_CHCK_RES << 16) | (msgCheckBytes & 0xFFFF));
+					usleep(1000);
+				}
+				else if (NET_CONN_TRAN_ANY == pkt[1] && pkt[0] < (MAX_MSG_SIZE/VIRTUAL_CHANNEL_SIZE))
+				{
+					msgCheckBytes = 0xFFFF;
+					msgCheckBytes ^= (u16) (pkt[0] | pkt[1] << 8);
+					msgCheckBytes ^= (u16) (pkt[2] | pkt[3] << 8);
+
+
+					tcpClient->connector.trVitrualChannel = pkt[0];
+
+					if (((u16) (pkt[2] | pkt[3] << 8)) + (VIRTUAL_CHANNEL_SIZE * tcpClient->connector.trVitrualChannel) <= MAX_TRANS_SIZE) 
+					{
+						tcpClient->connector.trSize = (u16) (pkt[2] | pkt[3] << 8);
+					}
+					else
+					{
+						tcpClient->connector.trVitrualChannel = 0;
+						tcpClient->connector.trSize = MAX_TRANS_SIZE;
+					}
+
+
+					SL_send(connector->gcport, (u32) (NET_CONN_CHCK_RES << 16) | (msgCheckBytes & 0xFFFF));
+					tcpClient->connector.requestSend  = 1;
+					usleep(1000);
+				}
+				else if (NET_CONN_LIFN_REQ == (u16) (pkt[0] | pkt[1] << 8))
+				{
+					SL_send(connector->gcport, (u32) (NET_CONN_LIFN_REQ << 16) | ((u16) (tcpClient->connector.connectionResult | tcpClient->connector.internalState << 8)));
+					usleep(1000);
+				}
                 else 
                 {
                     VIDEO_WaitVSync();
+					usleep(100000);
                 }
 
             } break;
             case SERIAL_STATE_SENDING:
             {
-                SL_send(connector->gcport, connector->sendMsgBuffer, connector->receivedMsgBuffer);
-                connector->requestSend = 0;
-                connector->internalState = SERIAL_STATE_WAITING;
+				if (!(msgBytesCount > MAX_MSG_SIZE || msgBytesCount == 0))
+				{
+					msgCheckBytes = 0xFFFF;
+
+					for(int i = 0; i <= msgBytesCount - 1; i+=4)
+					{
+						// Timeing can be quite precise so we give a generous delay to avoid duplicate messages
+						usleep(500);
+
+						if (i <= MAX_MSG_SIZE)
+						{
+							pkt[0] = connector->receivedMsgBuffer[msgBytesOffset + i];
+						}
+						else 
+						{
+							pkt[0] = 0;
+						}
+
+						if (i + 1 <= MAX_MSG_SIZE)
+						{
+							pkt[1] = connector->receivedMsgBuffer[msgBytesOffset + i + 1];
+						}
+						else 
+						{
+							pkt[1] = 0;
+						}
+
+						if (i + 2 <= MAX_MSG_SIZE)
+						{
+							pkt[2] = connector->receivedMsgBuffer[msgBytesOffset + i + 2];
+						}
+						else
+						{
+							pkt[2] = 0;
+						}
+
+						if (i + 3 <= MAX_MSG_SIZE)
+						{
+							pkt[3] = connector->receivedMsgBuffer[msgBytesOffset + i + 3];
+						}
+						else
+						{
+							pkt[3] = 0;
+						}
+
+						commResult = SL_send(connector->gcport, (pkt[0] << 24) | (pkt[1] << 16) | (pkt[2]<< 8) | pkt[3]);
+
+						if (commResult < 0)
+						{
+							msgBytesCount = 0;
+						}
+
+						msgCheckBytes ^= (u16) (pkt[0] | pkt[1] << 8);
+						msgCheckBytes ^= (u16) (pkt[2] | pkt[3] << 8);
+
+					}
+
+					usleep(500);
+					commResult = SL_send(connector->gcport, (u32) (NET_CONN_CHCK_RES << 16) | (msgCheckBytes & 0xFFFF));
+
+					usleep(50000);
+
+
+					if (commResult < 0)
+					{
+						connector->internalState = SERIAL_STATE_ERROR;
+					}
+					else 
+					{
+						connector->requestSend = 0;
+						connector->internalState = SERIAL_STATE_WAITING;
+					}
+				}
+
             } break;
             case SERIAL_STATE_RECEIVING:
             {
-                memset (connector->receivedMsgBuffer, 0, 1024);
-                SL_recv(connector->gcport, connector->sendMsgBuffer, connector->receivedMsgBuffer);
-                connector->requestReceive = 0;
-                connector->internalState = SERIAL_STATE_WAITING;
+				if (!(msgBytesCount > MAX_MSG_SIZE || msgBytesCount == 0))
+				{
+					for(int i = 0; i <= msgBytesCount - 1; i+=4)
+					{
+						// Timeing can be quite precise so we give a generous delay to avoid duplicate messages
+						usleep(500);
+
+						commResult = SL_recv(connector->gcport, pkt);
+
+						if (i <= MAX_MSG_SIZE)
+							connector->receivedMsgBuffer[msgBytesOffset + i]     =  pkt[0];
+
+						if (i + 1 <= MAX_MSG_SIZE)
+							connector->receivedMsgBuffer[msgBytesOffset + i + 1] =  pkt[1];
+
+						if (i + 2 <= MAX_MSG_SIZE)
+							connector->receivedMsgBuffer[msgBytesOffset + i + 2] =  pkt[2];
+
+						if (i + 3 <= MAX_MSG_SIZE)
+							connector->receivedMsgBuffer[msgBytesOffset + i + 3] =  pkt[3];
+
+
+						if (commResult < 0)
+						{
+							msgBytesCount = 0;
+						}
+
+						msgCheckBytes ^= (u16) (pkt[0] | pkt[1] << 8);
+						msgCheckBytes ^= (u16) (pkt[2] | pkt[3] << 8);
+
+					}
+					
+					if (connector->receivedMsgBuffer[msgBytesOffset] != 0)
+					{
+						commResult = SL_send(connector->gcport, (u32) (NET_CONN_CHCK_RES << 16) | (msgCheckBytes & 0xFFFF));
+					}
+
+					usleep(500);
+
+					if (commResult < 0)
+					{
+						connector->internalState = SERIAL_STATE_ERROR;
+					}
+					else
+					{
+						connector->requestReceive = 1;
+						connector->internalState = SERIAL_STATE_WAITING;
+					}
+				}
+
             } break;
             case SERIAL_STATE_DONE:
             {
               connector->internalState = SERIAL_STATE_SEARCHING_FOR_GBA;
               active = 0;
             } break;
+			case SERIAL_STATE_ERROR:
+            {
+			  SL_resetDeviceType(connector->gcport);
+    		  SL_resetTransmissionFinished(connector->gcport);
+			  pkt[0] = 0;
+			  pkt[1] = 0;
+			  pkt[2] = 0;
+			  pkt[3] = 0;
+			  commResult = 0;
+			  SI_GetTypeAsync(connector->gcport, SL_getDeviceTypeCallback(connector->gcport));
+              connector->internalState = SERIAL_STATE_SEARCHING_FOR_GBA;
+            } break;
+            
             
 
         }

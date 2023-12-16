@@ -14,6 +14,8 @@
 #include <gccore.h>
 #include <network.h>
 #include <unistd.h>
+#include "connectors.h"
+#include "logger.h"
 
 /**
 * Unlike a gc controller, plugging in a GBA will not immediately make it show up when scanning ports
@@ -37,78 +39,36 @@
 
 #define SI_STATUS_CONNECTED 0x10
 
-
-// Client Connector state (lifecycle state in the connection loop)
-enum {
-    SERIAL_STATE_SEARCHING_FOR_GBA,
-	SERIAL_STATE_INIT,
-	SERIAL_STATE_WAITING,
-	SERIAL_STATE_SENDING,
-	SERIAL_STATE_RECEIVING,
-	SERIAL_STATE_DONE
-};
-
-// Connection states 
-enum {
-    CONNECTION_NO_GBA, // When no gba has been detected in the gc port yet
-    CONNECTION_STARTING, // When a new conneciton is detected and preparing to connect
-    CONNECTION_CONNECTED // When a connection has been established with the gba
-};
-
-typedef struct {
-	u8 connectionResult; //!< State the (externally visible) client is in i.e if it's connected or has had an error 
-    u8 internalState; //!<  State the (internal) current connection is in i.e sending data, waiting e.t.c
-
-    bool requestSend; //!< If there is data waiting to be sent
-    bool requestReceive; //!< If we are waiting to fetch data
-    bool requestStop; //!< If we are waiting to stop
-
-    u8 gcport; //!< the gamecube port we are listening on (starting from 0)
-    char receivedMsgBuffer[1024]; //!< Where we store data that has been recived
-    char sendMsgBuffer[1024]; //!< Where we store data that we want to send when ready
-} SerialConnector;
-
-static void *seriald (SerialConnector *connector); //!<  Function that handles the connection loop
+#define MAX_TRANS_SIZE 1024
+// Special Commands Recognised by the wii
+#define NET_CONN_SEND_REQ 0x1500 // Tell wii you want to send it data              | msg bytes 15 YY XX XX (X is the 16bit size of msg to send, YY is the virtual channel)
+#define NET_CONN_SEND_ANY 0x15
+#define NET_CONN_RECV_REQ 0x2500 // Tell wii to send us data from the buffer for this devices port | msg bytes 25 YY XX XX (X is the 16bit size of msg to receive, YY is the virtual channel)
+#define NET_CONN_RECV_ANY 0x25 
+#define NET_CONN_TRAN_ANY 0x13
+#define NET_CONN_BCLR_REQ 0x1200 // Tell wii to clear the whole message buffer     | msg bytes 12 00 XX XX (last 16 bits are unused)
+#define NET_CONN_PINF_REQ 0x1201 // Tell wii to use current data as player info    | msg bytes 12 01 XX XX (last 16 bits are unused)
+#define NET_CONN_CINF_REQ 0x1202 // Tell wii to use current data as server info    | msg bytes 12 02 XX XX (last 16 bits are unused)
+// Special Commands Comming from the wii
+#define NET_CONN_CHCK_RES 0x1101 // Returning check bytes for the last data sent   | msg bytes 12 01 XX XX (X are the 16bit check bytes, made by XORing each seq 16bits of the msg)
+#define NET_CONN_LIFN_REQ 0x2005 // Return information about this devices network connection 
 
 // TODO: take a look at access. a bunch of things are currently public that shouldn't be so the static connection thread can access them
 class LinkCableClient {
 public:
 	//!Constructor
 	//!\param port Which gamecube port to listen on (a number from 0-3)
-    LinkCableClient(u8 gcport);
+    LinkCableClient(u8 gcport, Logger * LOGGER);
     //!Destructor
 	~LinkCableClient();
     //!Starts listening on a port and will auto connect if device detected
 	void Start();
-    //!Send data to the GBA
-	// void SerialSend(char * toSend);
-    // //!Read data from the GBA
-	// char* SerialReceive();
     //! Returns the state of the current connection (i.e if the gba is connected or not)
     u8 GetConnectionResult();
-    //!Reset the serial connection
-	// void SerialReset();
-    // //!Query the status of the serial conneciton (with the results written to the message buffer)
-	// void SerialStatus();
 
     lwp_t serd_handle; //!< Handle for the thread doing the connection
 
     SerialConnector connector; //!< Struct to handle the connection information that can be passed to the thread
-
 };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 #endif

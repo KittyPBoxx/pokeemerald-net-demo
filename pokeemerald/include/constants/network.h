@@ -36,18 +36,8 @@
 */
 
 // Special Commands Recognised by the wii
-// #define NET_CONN_LINF_REQ 0x2000 // Return information about the local state e.g which port we are connected to / how many players
-// #define NET_CONN_LIF1_REQ 0x2001 // Return information about device in port 1
-// #define NET_CONN_LIF2_REQ 0x2002 // port 2
-// #define NET_CONN_LIF3_REQ 0x2003 // port 3
-// #define NET_CONN_LIF4_REQ 0x2004 // port 4
 
 #define NET_CONN_LIFN_REQ 0x2005 // Return information about this devices network connection 
-
-// #define NET_CONN_LRE1_REQ 0x2100 // Tell wii to send us data from the buffer for device in port 1  | msg bytes 21 01 XX XX (X is the 16bit size of msg to receive, YY is the virtual channel)
-// #define NET_CONN_LRE2_REQ 0x2200 // port 2
-// #define NET_CONN_LRE3_REQ 0x2300 // port 3
-// #define NET_CONN_LRE3_REQ 0x2400 // port 4
 
 #define NET_CONN_RECV_REQ 0x2500 // Tell wii to send us data from the buffer for this devices port | msg bytes 25 YY XX XX (X is the 16bit size of msg to receive, YY is the virtual channel)
 #define NET_CONN_RCHF0_REQ 0x25F0  
@@ -69,6 +59,22 @@
 
 // Special Commands Comming from the wii
 #define NET_CONN_CHCK_RES 0x1101 // Returning check bytes for the last data sent   | msg bytes 12 01 XX XX (X are the 16bit check bytes, made by XORing each seq 16bits of the msg)
+
+/**
+*
+* The following commands are reserved for 'local-to-local' communication between GBA's plugged into the same Wii but have not been implemented 
+*
+* #define NET_CONN_LINF_REQ 0x2000 // Return information about the local state e.g which port we are connected to / how many players
+* #define NET_CONN_LIF1_REQ 0x2001 // Return information about device in port 1
+* #define NET_CONN_LIF2_REQ 0x2002 // port 2
+* #define NET_CONN_LIF3_REQ 0x2003 // port 3
+* #define NET_CONN_LIF4_REQ 0x2004 // port 4
+*
+* #define NET_CONN_LRE1_REQ 0x2100 // Tell wii to send us data from the buffer for device in port 1  | msg bytes 21 01 XX XX (X is the 16bit size of msg to receive, YY is the virtual channel)
+* #define NET_CONN_LRE2_REQ 0x2200 // port 2
+* #define NET_CONN_LRE3_REQ 0x2300 // port 3
+* #define NET_CONN_LRE3_REQ 0x2400 // port 4
+**/
 
 #define MAX_CONNECTION_LOOPS 20000
 #define MAX_CONNECTION_RETRIES 8

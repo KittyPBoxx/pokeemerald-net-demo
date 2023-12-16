@@ -21,10 +21,6 @@
 
 #define SI_TRANS_DELAY 50 // Minimum delay between data transfers (any faster and data might be missed)
 
-#define MAX_MSG_SIZE 4096
-
-#define VIRTUAL_CHANNEL_SIZE 16
-
 #define MAX_CONNECTION_LOOPS 1000
 
 volatile u32 ch0DeviceType = 0;

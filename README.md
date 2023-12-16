@@ -57,7 +57,12 @@ There are 3 main components to this project:
 ## Instructions *(Very breif instructions for testing, I'm working on the Dev and User docs)*
 
 1. Build the pokeemerald project
-2. In Dolphin >= 5, go to controllers and configure an integrated GBA controller (or TCP controller) with a bios and the game loaded
+2. In Dolphin >= 5, go to controllers and select integrated GBA controller (or TCP controller if you are using external mgba) 
+3. Make sure the following config is set in dolphin:
+  * settings->wii | aspect ratio is set to 4:3
+  * settings->gamecube | a gba bios is loaded  
+  * settings->gamecube | the pokeemerald rom is loaded in same port as the integrated GBA controller you are using
+  * If using an exsiting save the name is updated. i.e if your rom is pokeemerald.gba and you are in port 1 the save would be called 'pokeemerald-1.sav'
 3. Run the Pokecom channel .dol or install the channel WAD (with load wii system menu, then install WAD)
 4. Run Celio Server application with `npm run start`, and load the web UI by going to localhost:8081 in a browser
 5. Restart the GBA so that the Pokecom channel will detect it. The network config is stored in the game but can be overriden on the wii. By default it will connect at localhost:9000 (set in net_conn.c) so make sure dolphin and the server are running on the same machine
