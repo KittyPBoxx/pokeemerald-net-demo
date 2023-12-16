@@ -21,6 +21,15 @@ sequenceDiagram
     Note over 📺 WII,🎮 GBA: (JOYBUS)
 ```
 
+## Current Demos
+
+Several features are included to showcase the network conectivity. These crrently include:
+
+- Returning a welcome message to display in game when connecting to the server
+- Downloadable EReader Style Battles. Through the Web UI, choose 3 pokemon, nicknames, held items, moves and levels.
+- Downloadable Mart. Through the Web UI, pick up to 6 items for the mart to sell.
+- Downloadable Gift Egg. Through Web UI choose the pokemon and allow it to have a special move. Users can only download each egg once. 
+
 ## Requirements
 
 There are two ways to get this project running:
@@ -42,17 +51,8 @@ There are two ways to get this project running:
 There are 3 main components to this project:
 
 - A modified version of pokeemerald with a collection of network functions for reliable communication with the Wii
-- A homebrew Wii channel allowing up-to 4 GBA's to connect
+- A homebrew Wii channel allowing up-to 4 GBA's to connect to the server (per wii)
 - A NodeJS Server, with TCP Server for game connections and a Webserver for providing a UI for configuring the server
-
-## Current Demos
-
-Several features are included to showcase the network conectivity. These crrently include:
-
-- Returning a welcome message to display in game when connecting to the server
-- Downloadable EReader Style Battles. Through the Web UI, choose 3 pokemon, nicknames, held items, moves and levels.
-- Downloadable Mart Through the Web UI, ick up to 6 items for the mart to sell.
-- Downloadable Gift Egg. Through Web UI choose the pokemon and allow it to have a special move. Users can only download each egg once. 
 
 ## Instructions *(Very breif instructions for testing, I'm working on the Dev and User docs)*
 
