@@ -56,7 +56,7 @@ msgstr "Connect your GBA to the Wii. Then turn it on."
 
 ### Debug Menu ###
 msgid "debug.title"
-msgstr "Debug/Logs"
+msgstr "Debug Info"
 msgid "debug.back"
 msgstr "Go Back"
 

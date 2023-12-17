@@ -21,9 +21,8 @@
 #include "tcpclient.h"
 #include "gettext.h"
 #include "linkcableclient.h"
-#include "logger.h"
 
-#define THREAD_SLEEP 100
+#define THREAD_SLEEP 10
 
 static GuiImageData * pointer[4];
 static GuiImage * bgImg = nullptr;
@@ -31,8 +30,6 @@ static GuiSound * bgMusic = nullptr;
 static GuiWindow * mainWindow = nullptr;
 static lwp_t guithread = LWP_THREAD_NULL;
 static bool guiHalt = true;
-static LinkCableClient * gbas[4];
-static Logger * LOGGER = nullptr;
 
 char ipv4[32] = "127.0.0.1:9000";
 char serverName[32] = "\0";
@@ -198,7 +195,7 @@ int NetworkTestPopup(const char *title, const char *msg, const char *btn1Label, 
 			client->Disconnect();
 			choice = 1;
 		}
-		else if (updatesBeforeResult > 20000)
+		else if (updatesBeforeResult > 200000)
 		{
 			if (lastConnectionState != client->GetConnectionResult())
 			{
@@ -493,7 +490,6 @@ static int MenuSettings(GuiSound* bgMusic)
 	w.Append(&exitBtn);
 
 	mainWindow->Append(&w);
-
 	ResumeGui();
 
 	while(menu == MENU_NONE)
@@ -525,15 +521,16 @@ static int MenuSettings(GuiSound* bgMusic)
 		// TODO: Check if the server name has updated and update is if so or we can just pass a pointer to the server name
 		// TODO: Check if the player name in the manager has changes and update it (or just pass a pointer to the ) 
 
-		if (gbas[0]->GetConnectionResult() > 0)
-		{
-			connections.ConnectPlayer(1);
-		}
+		// if (gbas[0]->GetConnectionResult() > 0)
+		// {
+		// 	connections.ConnectPlayer(1);
+		// }
 
 	}
 
 	HaltGui();
 	mainWindow->Remove(&w);
+	mainWindow->Remove(&titleTxt);
 	return menu;
 }
 
@@ -631,7 +628,7 @@ static int NetworkConfigurationMenu(GuiSound* bgMusic)
 /****************************************************************************
  * DebugMenu
  ***************************************************************************/
-static int DebugMenu(GuiSound* bgMusic)
+static int DebugMenu(GuiSound* bgMusic, Logger * LOGGER)
 {
 	int menu = MENU_NONE;
 
@@ -705,7 +702,6 @@ static int DebugMenu(GuiSound* bgMusic)
 	while(menu == MENU_NONE)
 	{
 		usleep(THREAD_SLEEP);
-		bgMusic->Loop();
 
 		for (int i = 0; i < MAX_LOGS; i++)
 		{
@@ -719,6 +715,8 @@ static int DebugMenu(GuiSound* bgMusic)
 		if (WPAD_ButtonsDown(0) & WPAD_BUTTON_MINUS) {
 			menu = MENU_SETTINGS;
 		}
+
+		bgMusic->Loop();
 	}
 	HaltGui();
 
@@ -728,16 +726,10 @@ static int DebugMenu(GuiSound* bgMusic)
 }
 
 
-void setupGBAConnector(int port, Logger * LOGGER)
-{
-	gbas[port] = new LinkCableClient(port, LOGGER);
-	gbas[port]->Start();
-}
-
 /****************************************************************************
  * MainMenu
  ***************************************************************************/
-void MainMenu(int menu)
+void MainMenu(int menu, Logger * LOGGER)
 {
 	int currentMenu = menu;
 
@@ -748,21 +740,11 @@ void MainMenu(int menu)
 	pointer[3] = new GuiImageData(player4_point_png);
 	#endif
 
-	LOGGER = new Logger();
-
-	setupGBAConnector(0, LOGGER);
-	// setupGBAConnector(1, LOGGER);
-	// setupGBAConnector(2, LOGGER);
-	// setupGBAConnector(3, LOGGER);
-
 	mainWindow = new GuiWindow(screenwidth, screenheight);
 
 	bgImg = new GuiImage(screenwidth, screenheight, (GXColor){20, 20, 20, 255});
 	bgImg->ApplyBackgroundPattern();
 	mainWindow->Append(bgImg);
-
-	GuiTrigger trigA;
-	trigA.SetSimpleTrigger(-1, WPAD_BUTTON_A | WPAD_CLASSIC_BUTTON_A, PAD_BUTTON_A);
 
 	ResumeGui();
 
@@ -782,7 +764,7 @@ void MainMenu(int menu)
 				currentMenu = NetworkConfigurationMenu(bgMusic);
 				break;
 			case MENU_DEBUG:
-				currentMenu = DebugMenu(bgMusic);
+				currentMenu = DebugMenu(bgMusic, LOGGER);
 				break;
 			default: // unrecognized menu
 				currentMenu = MenuSettings(bgMusic);
@@ -792,7 +774,6 @@ void MainMenu(int menu)
 
 	ResumeGui();
 	ExitRequested = 1;
-	while(1) usleep(THREAD_SLEEP);
 
 	HaltGui();
 

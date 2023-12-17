@@ -9,6 +9,7 @@
 #include <string.h>
 #include <tcpclient.h>
 #include <stdlib.h>
+#include "connectors.h"
 
 #define TCP_FLAGS 0
 #define SERVER_NAME_REQUEST "NR_"
@@ -83,8 +84,8 @@ void TCPClient::Disconnect()
 
 void TCPClient::SendData(char * toSend)
 {
-    memset (connector.sendMsgBuffer, 0, 1024);
-    strncpy(connector.sendMsgBuffer, toSend, sizeof(connector.sendMsgBuffer)-1);
+    memset (connector.sendMsgBuffer, 0, NET_MSG_SIZE);
+    strncpy(connector.sendMsgBuffer, toSend, NET_MSG_SIZE-1);
     connector.sendMsgBuffer[sizeof(connector.sendMsgBuffer)-1] = '\0';
     connector.requestSend = 1;
 }
@@ -106,8 +107,8 @@ u8 TCPClient::GetConnectionResult()
 
 void TCPClient::TestConnection(char * addr)
 {
-	this->connector.serialConnector = (SerialConnector*) malloc(sizeof(SerialConnector));;
-	memset(&(this->connector.serialConnector->playerData), 0, sizeof(this->connector.serialConnector->playerData));
+	this->connector.serialConnector = (SerialConnector*) malloc(sizeof(SerialConnector));
+	memset(&(this->connector.serialConnector->playerData), 0, sizeof(PlayerData));
 	this->Connect(addr);
 }
 
@@ -162,7 +163,7 @@ static void *httpd (TCPConnector *connector)
 	struct in_addr ipTest;
     if (inet_aton(ipOrDomainName, &ipTest))
 	{
-		memset (&server, 0, sizeof (server));
+		memset (&server, 0, sizeof (struct sockaddr_in));
 		server.sin_family= AF_INET;
 		server.sin_len = sizeof (struct sockaddr_in); 
 		server.sin_port= htons (port);
@@ -185,7 +186,7 @@ static void *httpd (TCPConnector *connector)
 			case TCP_STATE_INIT: 
 			{
 				sock = net_socket (AF_INET, SOCK_STREAM, IPPROTO_IP);
-				s32 conn = net_connect(sock, (struct sockaddr *) &server, sizeof server);
+				s32 conn = net_connect(sock, (struct sockaddr *) &server, sizeof(struct sockaddr_in));
 				if (conn < 0) 
                 {
 					connector->connectionResult = CONNECTION_ERROR_CONNECTION_FAILED;
@@ -200,8 +201,8 @@ static void *httpd (TCPConnector *connector)
 				conn = net_send(sock, SERVER_NAME_REQUEST, strlen(SERVER_NAME_REQUEST), TCP_FLAGS);
 
                 // Read response (which should be server name like SN_<NAME_OF_SERVER>)
-				memset (connector->fetchedMsgBuffer, 0, 1024);
-				conn = net_recv (sock, connector->fetchedMsgBuffer, 1024, TCP_FLAGS);
+				memset (connector->fetchedMsgBuffer, 0, NET_MSG_SIZE);
+				conn = net_recv (sock, connector->fetchedMsgBuffer, NET_MSG_SIZE, TCP_FLAGS);
 
 				if (connector->fetchedMsgBuffer[0] == 'S' && 
                     connector->fetchedMsgBuffer[1] == 'N' && 
@@ -214,7 +215,7 @@ static void *httpd (TCPConnector *connector)
 					
 					conn = net_send(sock, WELCOME_REQUEST, strlen(WELCOME_REQUEST), TCP_FLAGS);
 
-					conn = net_recv (sock, connector->fetchedMsgBuffer, 1024, TCP_FLAGS);
+					conn = net_recv (sock, connector->fetchedMsgBuffer, NET_MSG_SIZE, TCP_FLAGS);
 
 					if (connector->fetchedMsgBuffer[0] == 0x25)
 					{
@@ -231,9 +232,9 @@ static void *httpd (TCPConnector *connector)
 					for (unsigned int i = 0; i < strlen(SEND_PLAYER_DATA); i++) 
 						connector->sendMsgBuffer[i] = SEND_PLAYER_DATA[i];
 
-					memcpy(&(connector->sendMsgBuffer)[strlen(SEND_PLAYER_DATA)], &connector->serialConnector->playerData, sizeof(connector->serialConnector->playerData));
+					memcpy(&(connector->sendMsgBuffer)[strlen(SEND_PLAYER_DATA)], &connector->serialConnector->playerData, sizeof(PlayerData));
 
-					conn = net_send(sock, connector->sendMsgBuffer, strlen(SEND_PLAYER_DATA) + sizeof connector->serialConnector->playerData, TCP_FLAGS);
+					conn = net_send(sock, connector->sendMsgBuffer, strlen(SEND_PLAYER_DATA) + sizeof(PlayerData), TCP_FLAGS);
 
 				} 
                 else 
@@ -275,7 +276,7 @@ static void *httpd (TCPConnector *connector)
 			}	break;
 			case TCP_STATE_SENDING:
 			{
-				memset (connector->sendMsgBuffer, 0, 1024);
+				memset (connector->sendMsgBuffer, 0, NET_MSG_SIZE);
 				memcpy(connector->sendMsgBuffer, &(connector->serialConnector->receivedMsgBuffer)[connector->trVitrualChannel * VIRTUAL_CHANNEL_SIZE], connector->trSize);
                 conn = net_send(sock, connector->sendMsgBuffer, connector->trSize, TCP_FLAGS);
 				if (conn < 0) 
@@ -293,8 +294,8 @@ static void *httpd (TCPConnector *connector)
 			}	break;
             case TCP_STATE_FETCHING: 
 			{
-            	memset (connector->fetchedMsgBuffer, 0, 1024);
-				conn = net_recv (sock, connector->fetchedMsgBuffer, 1024, TCP_FLAGS);
+            	memset (connector->fetchedMsgBuffer, 0, NET_MSG_SIZE);
+				conn = net_recv (sock, connector->fetchedMsgBuffer, NET_MSG_SIZE, TCP_FLAGS);
 				if (conn < 0) 
                 {
 					connector->threadActive = 0;

@@ -10,6 +10,10 @@
 #include <seriallink.h>
 #include <pokestring.h>
 #include "tcpclient.h"
+#include <stdio.h>
+#include <string>
+
+#define IP_BUFFER_SIZE 32
 
 static void *seriald (SerialConnector *connector); //!<  Function that handles the connection loop
 
@@ -38,6 +42,8 @@ void LinkCableClient::Start()
     this->connector.requestSend = 0;
     this->connector.requestReceive = 0;
     this->connector.requestStop = 0;
+	this->connector.internalState = SERIAL_STATE_SEARCHING_FOR_GBA;
+	this->connector.connectionResult = CONNECTION_NO_GBA;
 
     serd_handle = (lwp_t)NULL;
     
@@ -46,7 +52,7 @@ void LinkCableClient::Start()
 					 &this->connector,           /* arg pointer for thread */
 					 NULL,			             /* stack base */
 					 16*1024,		             /* stack size */
-					 50				             /* thread priority */ );
+					 255    		             /* thread priority */ );
 }
 
 u8 LinkCableClient::GetConnectionResult() 
@@ -56,21 +62,16 @@ u8 LinkCableClient::GetConnectionResult()
 
 static void *seriald (SerialConnector *connector)
 {
-	connector->LOGGER->Log((char *) "Searching For GBA on port 1");
+	std::string connectLog = "Searching For GBA on port ";
+	connectLog.append(std::to_string(1 + connector->gcport));
+	connector->LOGGER->Log((char *) connectLog.c_str());
 
     SL_resetDeviceType(connector->gcport);
     SL_resetTransmissionFinished(connector->gcport);
 
-    connector->requestSend = 0;
-    connector->requestReceive = 0;
-    connector->requestStop = 0;
-	connector->internalState = SERIAL_STATE_SEARCHING_FOR_GBA;
-	connector->connectionResult = CONNECTION_NO_GBA;
-
     TCPClient* tcpClient = new TCPClient();
 
-    char ipv4Port[32] = "127.0.0.1:9000";
-	tcpClient->connector.remoteAddressAndPort = ipv4Port;
+    char ipv4Port[IP_BUFFER_SIZE];
 	tcpClient->connector.serialConnector = connector;
 
     int active = 1;    
@@ -89,11 +90,13 @@ static void *seriald (SerialConnector *connector)
 
             case SERIAL_STATE_SEARCHING_FOR_GBA: 
 			{
-				connector->LOGGER->Log((char *) "Searching For A GBA");
                 // SI_GBA_BIOS is also covered by this case
                 if (SL_getDeviceType(connector->gcport) & SI_GBA)
                 {
-					connector->LOGGER->Log((char *) "Found A GBA");
+					std::string foundGBALog = "Found A GBA on port ";
+					foundGBALog.append(std::to_string(1 + connector->gcport));
+					connector->LOGGER->Log((char *) foundGBALog.c_str());
+
 					connector->connectionResult = CONNECTION_STARTING;
                     connector->internalState = SERIAL_STATE_INIT;
                 }
@@ -113,17 +116,17 @@ static void *seriald (SerialConnector *connector)
             } break;
             case SERIAL_STATE_INIT: 
             {
-				connector->LOGGER->Log((char *) "INIT");
-
                 SL_reset(connector->gcport);
 
                 commResult = SL_getstatus(connector->gcport, pkt);
 				if (commResult < 0)
 				{
+					connector->LOGGER->Log((char *) "ERROR connecting");
 					connector->internalState = SERIAL_STATE_ERROR;
 				}
                 else if (pkt[2]&SI_STATUS_CONNECTED)
                 {
+					connector->LOGGER->Log((char *) "Connected");
 					connector->connectionResult = CONNECTION_CONNECTED;
                     connector->internalState = SERIAL_STATE_WAITING;
                 }
@@ -139,6 +142,7 @@ static void *seriald (SerialConnector *connector)
 
 				if (commResult < 0)
 				{
+					connector->LOGGER->Log((char *) "ERROR Waiting");
 					connector->internalState = SERIAL_STATE_ERROR;
 				}
 				else if (NET_CONN_SEND_ANY == pkt[1] && pkt[0] < (MAX_MSG_SIZE/VIRTUAL_CHANNEL_SIZE)) // We are reciving data from the GBA
@@ -159,7 +163,7 @@ static void *seriald (SerialConnector *connector)
 					msgBytesCount = (u16) (pkt[2] | pkt[3] << 8);
 
 					msgBytesOffset = pkt[0] * VIRTUAL_CHANNEL_SIZE;
-					
+
 					SL_reset(connector->gcport);
                     connector->internalState = SERIAL_STATE_SENDING;
                 }
@@ -216,9 +220,18 @@ static void *seriald (SerialConnector *connector)
 
 					if (validatePokeStringMsg(connector->receivedMsgBuffer, 0, msgBytesCount))
 					{
-						bytesToChars(connector->receivedMsgBuffer, 0, msgBytesCount);
-						connector->receivedMsgBuffer[msgBytesCount + 1]  = '\0'; // Make sure the string is actually terminated
-                        memset(ipv4Port, 0, sizeof ipv4Port);
+						if (msgBytesCount < MAX_MSG_SIZE)
+						{
+							bytesToChars(connector->receivedMsgBuffer, 0, msgBytesCount);
+							connector->receivedMsgBuffer[msgBytesCount + 1]  = '\0'; // Make sure the string is actually terminated
+						}
+						else
+						{
+							bytesToChars(connector->receivedMsgBuffer, 0, MAX_MSG_SIZE);
+							connector->receivedMsgBuffer[MAX_MSG_SIZE - 1]  = '\0'; // Make sure the string is actually terminated
+						}
+
+                        memset(ipv4Port, 0, IP_BUFFER_SIZE);
                         strcpy(ipv4Port, connector->receivedMsgBuffer);
 						tcpClient->Connect(ipv4Port);
 					}
@@ -264,7 +277,7 @@ static void *seriald (SerialConnector *connector)
             } break;
             case SERIAL_STATE_SENDING:
             {
-				if (!(msgBytesCount > MAX_MSG_SIZE || msgBytesCount == 0))
+				if (!((msgBytesCount + msgBytesOffset) > MAX_MSG_SIZE || msgBytesCount == 0))
 				{
 					msgCheckBytes = 0xFFFF;
 
@@ -311,6 +324,8 @@ static void *seriald (SerialConnector *connector)
 
 						commResult = SL_send(connector->gcport, (pkt[0] << 24) | (pkt[1] << 16) | (pkt[2]<< 8) | pkt[3]);
 
+						usleep(5000);
+
 						if (commResult < 0)
 						{
 							msgBytesCount = 0;
@@ -320,6 +335,7 @@ static void *seriald (SerialConnector *connector)
 						msgCheckBytes ^= (u16) (pkt[2] | pkt[3] << 8);
 
 					}
+					
 
 					usleep(500);
 					commResult = SL_send(connector->gcport, (u32) (NET_CONN_CHCK_RES << 16) | (msgCheckBytes & 0xFFFF));
@@ -341,7 +357,7 @@ static void *seriald (SerialConnector *connector)
             } break;
             case SERIAL_STATE_RECEIVING:
             {
-				if (!(msgBytesCount > MAX_MSG_SIZE || msgBytesCount == 0))
+				if (!((msgBytesCount + msgBytesOffset) > MAX_MSG_SIZE || msgBytesCount == 0))
 				{
 					for(int i = 0; i <= msgBytesCount - 1; i+=4)
 					{
@@ -407,7 +423,7 @@ static void *seriald (SerialConnector *connector)
 			  pkt[3] = 0;
 			  commResult = 0;
 			  SI_GetTypeAsync(connector->gcport, SL_getDeviceTypeCallback(connector->gcport));
-              connector->internalState = SERIAL_STATE_SEARCHING_FOR_GBA;
+              connector->internalState = SERIAL_STATE_INIT;
             } break;
             
             

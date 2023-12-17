@@ -14,6 +14,8 @@
 #define MAX_LINK_MSG_SIZE 4096
 #define VIRTUAL_CHANNEL_SIZE 16
 
+#define NET_MSG_SIZE 1024
+
 typedef struct {
 	char playerName[8];
 	u16 trainerId;
@@ -91,8 +93,8 @@ typedef struct {
 	u16 trSize; //!< The size of the data we are transmitting
 
     char *remoteAddressAndPort; //!< the address we are connecting to
-    char fetchedMsgBuffer[1024]; //!< Where we store data that has been recived
-    char sendMsgBuffer[1024]; //!< Where we store data that we want to send when ready
+    char fetchedMsgBuffer[NET_MSG_SIZE]; //!< Where we store data that has been recived
+    char sendMsgBuffer[NET_MSG_SIZE]; //!< Where we store data that we want to send when ready
 	SerialConnector *serialConnector; //!< A Reference serial connector so we can write data directly to its buffer
 } TCPConnector;
 

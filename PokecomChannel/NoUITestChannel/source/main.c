@@ -23,6 +23,9 @@
 #define NET_CONN_HANDSHAKE_RES_NO_INTERNET 0xCAD1 // Response to the gba if we have no internet
 #define NET_CONN_HANDSHAKE_RES_ONLINE 0xCAD2 // Response to the gba if we have internet
 
+#define MAX_MSG_SIZE 4096
+#define VIRTUAL_CHANNEL_SIZE 16
+
 // Selection of serial input identifier codes
 #define SI_ERROR_UNDER_RUN      0x0001
 #define SI_ERROR_OVER_RUN       0x0002
@@ -225,7 +228,7 @@ int main(int argc, char **argv) {
 	// Configure the network interface
 
 	SerialConnector gbaArgs;
-	gbaArgs.gcport = 1;
+	gbaArgs.gcport = 0;
     gbaArgs.requestSend = 0;
     gbaArgs.requestReceive = 0;
     gbaArgs.requestStop = 0;
