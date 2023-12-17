@@ -95,12 +95,14 @@ static const char * resolveNetworkMessage(u8 state, TCPClient* client)
 			char* concatString = new char[ bufferSize ];
 			strcpy( concatString, gettext("networkTest.CONNECTION_ERROR_INVALID_RESPONSE") );
 			strcat( concatString, client->GetResponse());
-			return concatString;
+			return gettext("networkTest.CONNECTION_ERROR_INVALID_RESPONSE");
 		}
 		break;
 		case CONNECTION_READY: 
-		default:
 			return gettext("networkTest.CONNECTION_READY");
+		case CONNECTION_INIT:	
+		default:
+			return gettext("networkTest.CONNECTION_INIT");
 	}
 }
 
@@ -113,7 +115,10 @@ int NetworkTestPopup(const char *title, const char *msg, const char *btn1Label, 
 {
 	int choice = -1;
 
-	bgMusic->SetVolume(15);
+	if (bgMusic->GetVolume() != 0)
+	{
+		bgMusic->SetVolume(15);
+	}
 
 	GuiWindow promptWindow(448,288);
 	promptWindow.SetAlignment(ALIGN_H::CENTRE, ALIGN_V::MIDDLE);
@@ -135,6 +140,13 @@ int NetworkTestPopup(const char *title, const char *msg, const char *btn1Label, 
 	msgTxt.SetAlignment(ALIGN_H::CENTRE, ALIGN_V::MIDDLE);
 	msgTxt.SetPosition(0,-20);
 	msgTxt.SetWrap(true, 400);
+
+	GuiText infoTxt(msg, 14, (GXColor){137, 207, 240, 255});
+	infoTxt.SetAlignment(ALIGN_H::CENTRE, ALIGN_V::MIDDLE);
+	infoTxt.SetPosition(0,35);
+	infoTxt.SetWrap(true, 400);
+	infoTxt.SetVisible(false);
+	infoTxt.SetText(gettext("networkTest.connectionOverrideNotification"));
 
 	GuiText btn1Txt(btn1Label, 22, (GXColor){0, 0, 0, 255});
 	GuiImage btn1Img(&btnOutline);
@@ -159,6 +171,7 @@ int NetworkTestPopup(const char *title, const char *msg, const char *btn1Label, 
 	promptWindow.Append(&dialogBoxImg);
 	promptWindow.Append(&titleTxt);
 	promptWindow.Append(&msgTxt);
+	promptWindow.Append(&infoTxt);
 	promptWindow.Append(&loader);
 	promptWindow.Append(&btn1);
 
@@ -206,6 +219,7 @@ int NetworkTestPopup(const char *title, const char *msg, const char *btn1Label, 
 					GuiSound connectingSuccessSound(success_pcm, success_pcm_size, SOUND::PCM);
 					connectingSuccessSound.SetVolume(20);
 					connectingSuccessSound.Play();
+					infoTxt.SetVisible(true);
 				}
 				else if (lastConnectionState != CONNECTION_READY)
 				{
@@ -214,13 +228,13 @@ int NetworkTestPopup(const char *title, const char *msg, const char *btn1Label, 
 					connectingErrorSound.Play();
 				}
 
-				msgTxt.SetText(resolveNetworkMessage(lastConnectionState, client));
-
 				if (lastConnectionState != CONNECTION_READY)
 				{
 					connectingSound.Stop();
 					loader.SetVisible(false);
 				}
+
+				msgTxt.SetText(resolveNetworkMessage(lastConnectionState, client));
 			} 
 		} 
 		else 
@@ -232,7 +246,10 @@ int NetworkTestPopup(const char *title, const char *msg, const char *btn1Label, 
 
 	connectingSound.Stop();
 
-	bgMusic->SetVolume(50);
+	if (bgMusic->GetVolume() != 0)
+	{
+		bgMusic->SetVolume(50);
+	}
 
 	promptWindow.SetEffect(EFFECT::SLIDE_TOP | EFFECT::SLIDE_OUT, 50);
 	while(promptWindow.GetEffect() > 0) usleep(THREAD_SLEEP);
@@ -253,7 +270,10 @@ int WindowPrompt(const char *title, const char *msg, const char *btn1Label, cons
 {
 	int choice = -1;
 
-	bgMusic->SetVolume(15);
+	if (bgMusic->GetVolume() != 0)
+	{
+		bgMusic->SetVolume(15);
+	}
 
 	GuiWindow promptWindow(448,288);
 	promptWindow.SetAlignment(ALIGN_H::CENTRE, ALIGN_V::MIDDLE);
@@ -342,7 +362,10 @@ int WindowPrompt(const char *title, const char *msg, const char *btn1Label, cons
 			choice = 0;
 	}
 
-	bgMusic->SetVolume(50);
+	if (bgMusic->GetVolume() != 0)
+	{
+		bgMusic->SetVolume(50);
+	}
 
 	promptWindow.SetEffect(EFFECT::SLIDE_TOP | EFFECT::SLIDE_OUT, 50);
 	while(promptWindow.GetEffect() > 0) usleep(THREAD_SLEEP);
@@ -419,7 +442,7 @@ void InitGUIThreads()
 /****************************************************************************
  * MenuSettings
  ***************************************************************************/
-static int MenuSettings(GuiSound* bgMusic)
+static int MenuSettings(GuiSound* bgMusic, LinkCableClient * gbas[4])
 {
 	int menu = MENU_NONE;
 
@@ -492,6 +515,19 @@ static int MenuSettings(GuiSound* bgMusic)
 	mainWindow->Append(&w);
 	ResumeGui();
 
+	bool isP1Connected = false;
+	bool isP2Connected = false;
+	bool isP3Connected = false;
+	bool isP4Connected = false;
+
+	bool isP1Named = false;
+	bool isP2Named = false;
+	bool isP3Named = false;
+	bool isP4Named = false;
+
+	int soundFadeLoop = 0;	
+	bool isMuted = bgMusic->GetVolume() == 0;
+
 	while(menu == MENU_NONE)
 	{
 		usleep(THREAD_SLEEP);
@@ -517,14 +553,74 @@ static int MenuSettings(GuiSound* bgMusic)
 			}
 		}
 
-		// TODO: Check if we need to update the GUIGbaConnections icons / link / transparency
 		// TODO: Check if the server name has updated and update is if so or we can just pass a pointer to the server name
 		// TODO: Check if the player name in the manager has changes and update it (or just pass a pointer to the ) 
 
-		// if (gbas[0]->GetConnectionResult() > 0)
-		// {
-		// 	connections.ConnectPlayer(1);
-		// }
+		/* Handle GBA connections in the ui */
+
+		if (!isP1Connected && gbas[0]->GetConnectionResult() > 0)
+		{
+			connections.ConnectPlayer(1);
+			isP1Connected = true;
+		} 
+		else if (isP1Connected && !isP1Named && gbas[0]->HasPlayerName())
+		{
+			connections.SetPlayerName(1, gbas[0]->GetPlayerName());
+			isP1Named = true;
+		}
+
+		if (!isP2Connected && gbas[1]->GetConnectionResult() > 0)
+		{
+			connections.ConnectPlayer(2);
+			isP2Connected = true;
+		}
+		else if (isP2Connected && !isP2Named && gbas[1]->HasPlayerName())
+		{
+			connections.SetPlayerName(2, gbas[1]->GetPlayerName());
+			isP2Named = true;
+		}
+
+		if (!isP3Connected && gbas[2]->GetConnectionResult() > 0)
+		{
+			connections.ConnectPlayer(3);
+			isP3Connected = true;
+		}		
+		else if (isP3Connected && !isP3Named && gbas[2]->HasPlayerName())
+		{
+			connections.SetPlayerName(3, gbas[2]->GetPlayerName());
+			isP3Named = true;
+		}
+
+
+		if (!isP4Connected && gbas[3]->GetConnectionResult() > 0)
+		{
+			connections.ConnectPlayer(4);
+			isP4Connected = true;
+		}
+		else if (isP4Connected && !isP4Named && gbas[3]->HasPlayerName())
+		{
+			connections.SetPlayerName(4, gbas[3]->GetPlayerName());
+			isP4Named = true;
+		}
+
+		if (!isMuted && 
+		    (isP1Connected || isP2Connected || isP3Connected || isP4Connected) 
+			&& bgMusic->GetVolume() > 0)
+		{
+			if (soundFadeLoop % 100000 == 0)
+			{
+				bgMusic->SetVolume((bgMusic->GetVolume() - 1));
+			} 
+			else 
+			{
+				soundFadeLoop++;
+			}
+			
+		} 
+		else if (bgMusic->GetVolume() == 0)
+		{
+			isMuted = true;
+		}
 
 	}
 
@@ -729,7 +825,7 @@ static int DebugMenu(GuiSound* bgMusic, Logger * LOGGER)
 /****************************************************************************
  * MainMenu
  ***************************************************************************/
-void MainMenu(int menu, Logger * LOGGER)
+void MainMenu(int menu, Logger * LOGGER, LinkCableClient * gbas[4])
 {
 	int currentMenu = menu;
 
@@ -758,7 +854,7 @@ void MainMenu(int menu, Logger * LOGGER)
 		switch (currentMenu)
 		{
 			case MENU_SETTINGS:
-				currentMenu = MenuSettings(bgMusic);
+				currentMenu = MenuSettings(bgMusic, gbas);
 				break;
 			case MENU_SETTINGS_NETWORK:
 				currentMenu = NetworkConfigurationMenu(bgMusic);
@@ -767,7 +863,7 @@ void MainMenu(int menu, Logger * LOGGER)
 				currentMenu = DebugMenu(bgMusic, LOGGER);
 				break;
 			default: // unrecognized menu
-				currentMenu = MenuSettings(bgMusic);
+				currentMenu = MenuSettings(bgMusic, gbas);
 				break;
 		}
 	}

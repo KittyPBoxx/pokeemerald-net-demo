@@ -60,6 +60,16 @@ u8 LinkCableClient::GetConnectionResult()
 	return this->connector.connectionResult;
 }
 
+bool LinkCableClient::HasPlayerName()
+{
+	return this->connector.playerData.playerName[0] != 0;
+}
+
+char * LinkCableClient::GetPlayerName()
+{
+	return this->connector.playerData.playerName;
+}
+
 static void *seriald (SerialConnector *connector)
 {
 	std::string connectLog = "Searching For GBA on port ";

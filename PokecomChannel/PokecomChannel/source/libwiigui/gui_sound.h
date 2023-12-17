@@ -29,6 +29,7 @@ public:
 	//!\param l Loop (true to loop)
 	void SetLoop(bool l);
 	void Loop(void);
+	s32 GetVolume();
 protected:
 	const u8 * sound; //!< Pointer to the sound data
 	SOUND type; //!< Sound format type (PCM)

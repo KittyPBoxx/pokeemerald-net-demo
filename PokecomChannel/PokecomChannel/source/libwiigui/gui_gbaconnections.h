@@ -9,6 +9,7 @@ public:
     void Draw();
     void ConnectPlayer(int player);
 	void Update(GuiTrigger * t);
+    void SetPlayerName(int player, char * name);
 protected:
     void HidePlayerTag(int playerNo);
     void ShowPlayerTag(int playerNo);
@@ -34,6 +35,10 @@ protected:
     GuiImage * p2LinkImg;
     GuiImage * p3LinkImg;
     GuiImage * p4LinkImg;
+    GuiImage * p1Screen;
+    GuiImage * p2Screen;
+    GuiImage * p3Screen;
+    GuiImage * p4Screen;
     GuiImage * globeImg;
     GuiImage * portsImg;
 

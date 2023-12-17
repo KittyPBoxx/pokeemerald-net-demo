@@ -34,47 +34,47 @@ GuiGbaConnections::GuiGbaConnections(char * serverName)
     playerTagImg[0] = new GuiImage(playerTag);
     playerTagImg[0]->SetPosition(8, 260);
     playerTagImg[0]->SetParent(this);
+    playerTagImg[0]->Tint(-150,-150,-150);
 
-
-    playerTagText[0] = new GuiText(gettext("connectionsUI.playerWaiting"), 12, (GXColor){0, 0, 0, 0xff});
+    playerTagText[0] = new GuiText(gettext("connectionsUI.playerWaiting"), 12, (GXColor){230, 230, 230, 0xff});
 	playerTagText[0]->SetAlignment(ALIGN_H::CENTRE, ALIGN_V::MIDDLE);
 	playerTagText[0]->SetPosition(0, 0);
     playerTagText[0]->SetParent(playerTagImg[0]);
 
-    HidePlayerTag(0);
+    HidePlayerTag(1);
 
     playerTagImg[1] = new GuiImage(playerTag);
     playerTagImg[1]->SetPosition(145, 260);
     playerTagImg[1]->SetParent(this);
 
-    playerTagText[1] = new GuiText(gettext("connectionsUI.playerWaiting"), 12, (GXColor){0, 0, 0, 0xff});
+    playerTagText[1] = new GuiText(gettext("connectionsUI.playerWaiting"), 12, (GXColor){230, 230, 230, 0xff});
 	playerTagText[1]->SetAlignment(ALIGN_H::CENTRE, ALIGN_V::MIDDLE);
 	playerTagText[1]->SetPosition(0, 0);
     playerTagText[1]->SetParent(playerTagImg[1]);
 
-    HidePlayerTag(1);
+    HidePlayerTag(2);
 
     playerTagImg[2] = new GuiImage(playerTag);
     playerTagImg[2]->SetPosition(303, 260);
     playerTagImg[2]->SetParent(this);
 
-    playerTagText[2] = new GuiText(gettext("connectionsUI.playerWaiting"), 12, (GXColor){0, 0, 0, 0xff});
+    playerTagText[2] = new GuiText(gettext("connectionsUI.playerWaiting"), 12, (GXColor){230, 230, 230, 0xff});
 	playerTagText[2]->SetAlignment(ALIGN_H::CENTRE, ALIGN_V::MIDDLE);
 	playerTagText[2]->SetPosition(0, 0);
     playerTagText[2]->SetParent(playerTagImg[2]);
 
-    HidePlayerTag(2);
+    HidePlayerTag(3);
 
     playerTagImg[3] = new GuiImage(playerTag);
     playerTagImg[3]->SetPosition(435, 260);
     playerTagImg[3]->SetParent(this);
-
-    playerTagText[3] = new GuiText(gettext("connectionsUI.playerWaiting"), 12, (GXColor){0, 0, 0, 0xff});
+    
+    playerTagText[3] = new GuiText(gettext("connectionsUI.playerWaiting"), 12, (GXColor){230, 230, 230, 0xff});
 	playerTagText[3]->SetAlignment(ALIGN_H::CENTRE, ALIGN_V::MIDDLE);
 	playerTagText[3]->SetPosition(0, 0);
     playerTagText[3]->SetParent(playerTagImg[3]);
 
-    HidePlayerTag(3);
+    HidePlayerTag(4);
 
     p1GBAImg = new GuiImage(p1GBA);
     p1GBAImg->SetPosition(20, 185);
@@ -116,6 +116,34 @@ GuiGbaConnections::GuiGbaConnections(char * serverName)
     p4LinkImg->SetParent(this);
     p4LinkImg->SetAlpha(50);
 
+    p1Screen = new GuiImage(32, 25, (GXColor){240, 240, 240, 255});
+    p1Screen->ApplyBackgroundPattern();
+    p1Screen->SetPosition(28, 29);
+    p1Screen->SetParent(p1GBAImg);
+    p1Screen->Tint(120,120,120);
+    p1Screen->SetAlpha(0);
+
+    p2Screen = new GuiImage(32, 25, (GXColor){240, 240, 240, 255});
+    p2Screen->ApplyBackgroundPattern();
+    p2Screen->SetPosition(28, 29);
+    p2Screen->SetParent(p2GBAImg);
+    p2Screen->Tint(120,120,120);
+    p2Screen->SetAlpha(0);
+
+    p3Screen = new GuiImage(32, 25, (GXColor){240, 240, 240, 255});
+    p3Screen->ApplyBackgroundPattern();
+    p3Screen->SetPosition(28, 29);
+    p3Screen->SetParent(p3GBAImg);
+    p3Screen->Tint(120,120,120);
+    p3Screen->SetAlpha(0);
+
+    p4Screen = new GuiImage(32, 25, (GXColor){240, 240, 240, 255});
+    p4Screen->ApplyBackgroundPattern();
+    p4Screen->SetPosition(28, 29);
+    p4Screen->SetParent(p4GBAImg);
+    p4Screen->Tint(120,120,120);
+    p4Screen->SetAlpha(0);
+
     globeImg = new GuiImage(globe);
     globeImg->SetPosition(245, 35);
     globeImg->SetAlpha(200);
@@ -152,6 +180,50 @@ GuiGbaConnections::GuiGbaConnections(char * serverName)
 void GuiGbaConnections::ConnectPlayer(int player) 
 {
     instructionsText->SetVisible(false);
+
+    if (player == 1)
+    {
+        p1GBAImg->SetAlpha(255);
+        p1LinkImg->SetAlpha(255);
+        p1LinkImg->Tint(-10, -10, 20);
+        ShowPlayerTag(player);
+        p1Screen->SetAlpha(220);
+    }
+
+    if (player == 2)
+    {
+        p2GBAImg->SetAlpha(255);
+        p2LinkImg->SetAlpha(255);
+        p2LinkImg->Tint(-10, -10, 20);
+        ShowPlayerTag(player);
+        p2Screen->SetAlpha(220);
+    }
+
+    if (player == 3)
+    {
+        p3GBAImg->SetAlpha(255);
+        p3LinkImg->SetAlpha(255);
+        p3LinkImg->Tint(-10, -10, 20);
+        ShowPlayerTag(player);
+        p3Screen->SetAlpha(220);
+    }
+
+    if (player == 4)
+    {
+        p4GBAImg->SetAlpha(255);
+        p4LinkImg->SetAlpha(255);
+        p4LinkImg->Tint(-10, -10, 20);
+        ShowPlayerTag(player);
+        p4Screen->SetAlpha(220);
+    }
+}
+
+void GuiGbaConnections::SetPlayerName(int playerNo, char * name) 
+{
+    if (playerNo > 4 || playerNo < 1)
+        return;
+
+    playerTagText[playerNo - 1]->SetText(name);
 }
 
 void GuiGbaConnections::Draw()
@@ -178,6 +250,11 @@ void GuiGbaConnections::Draw()
     p2LinkImg->Draw();
     p3LinkImg->Draw();
     p4LinkImg->Draw();
+
+    p1Screen->Draw();
+    p2Screen->Draw();
+    p3Screen->Draw();
+    p4Screen->Draw();
 
     globeImg->Draw();
     portsImg->Draw();
@@ -218,6 +295,11 @@ GuiGbaConnections::~GuiGbaConnections()
     delete p3LinkImg;
     delete p4LinkImg;
 
+    delete p1Screen;
+    delete p2Screen;
+    delete p3Screen;
+    delete p4Screen;
+
     delete globeImg;
     delete portsImg;
 
@@ -230,14 +312,20 @@ void GuiGbaConnections::Update(GuiTrigger * t)
 
 void GuiGbaConnections::HidePlayerTag(int playerNo)
 {
-    playerTagImg[playerNo]->SetVisible(false);
-    playerTagText[playerNo]->SetVisible(false);
+    if (playerNo > 4 || playerNo < 1)
+        return;
+
+    playerTagImg[playerNo - 1]->SetVisible(false);
+    playerTagText[playerNo - 1]->SetVisible(false);
 }
 
 void GuiGbaConnections::ShowPlayerTag(int playerNo)
 {
-    playerTagImg[playerNo]->SetVisible(true);
-    playerTagText[playerNo]->SetVisible(true);
+    if (playerNo > 4 || playerNo < 1)
+        return;
+
+    playerTagImg[playerNo - 1]->SetVisible(true);
+    playerTagText[playerNo - 1]->SetVisible(true);
 
     instructionsText->SetVisible(false);
 }

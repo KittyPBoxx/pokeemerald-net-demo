@@ -65,6 +65,10 @@ public:
 	void Start();
     //! Returns the state of the current connection (i.e if the gba is connected or not)
     u8 GetConnectionResult();
+    //! Returns true if the player name is populated
+    bool HasPlayerName();
+    //! Returns the name of the player
+    char * GetPlayerName();
 
     lwp_t serd_handle; //!< Handle for the thread doing the connection
 

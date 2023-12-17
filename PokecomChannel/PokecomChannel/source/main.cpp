@@ -67,7 +67,7 @@ int main(int argc, char *argv[])
 
 	if (USE_UI)
 	{
-		MainMenu(MENU_SETTINGS, LOGGER);
+		MainMenu(MENU_SETTINGS, LOGGER, gbas);
 	}
 	else
 	{

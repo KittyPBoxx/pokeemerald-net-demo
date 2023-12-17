@@ -11,9 +11,10 @@
 
 #include <ogcsys.h>
 #include "logger.h"
+#include "linkcableclient.h"
 
 void InitGUIThreads();
-void MainMenu (int menuitem, Logger * LOGGER);
+void MainMenu (int menuitem, Logger * LOGGER, LinkCableClient * gbas[4]);
 
 enum
 {

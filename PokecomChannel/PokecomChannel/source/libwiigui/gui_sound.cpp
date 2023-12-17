@@ -131,6 +131,11 @@ void GuiSound::SetVolume(int vol)
 	#endif
 }
 
+s32 GuiSound::GetVolume()
+{
+	return volume;
+}
+
 void GuiSound::SetLoop(bool l)
 {
 	loop = l;
@@ -138,16 +143,18 @@ void GuiSound::SetLoop(bool l)
 
 void GuiSound::Loop() {
 
-	switch(type)
-	{
-		case SOUND::PCM:
-		if (!IsPlaying())
-		Play();
-		break;
-		case SOUND::MP3:
-		if(!MP3Player_IsPlaying())
-		MP3Player_PlayBuffer(sound, length, NULL);
-		break;
+	if (loop) {
+		switch(type)
+		{
+			case SOUND::PCM:
+			if (!IsPlaying())
+			Play();
+			break;
+			case SOUND::MP3:
+			if(!MP3Player_IsPlaying())
+			MP3Player_PlayBuffer(sound, length, NULL);
+			break;
+		}
 	}
 
 }
