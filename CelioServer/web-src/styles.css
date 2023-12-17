@@ -51,6 +51,15 @@ body .ui.header,
 
 .ui.card.trainer-card {
     overflow: hidden;
+    min-height: 10em;
+}
+
+.ui.header.main {
+    display: inline-table;
+}
+
+.ui.secondary.button {
+    min-height: 2.5em;
 }
 
 body .ui.input>input:focus {
@@ -81,3 +90,4 @@ body .ui.input>input:focus {
 #egg-sprite {
     transform: scale(1.5);
 }
+
