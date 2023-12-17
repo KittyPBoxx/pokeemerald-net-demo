@@ -52,6 +52,7 @@ typedef struct {
     u8 requestStop; //!< If we are waiting to stop
 
     char serverName[32]; //!< Server the player is currently connected to
+	char overrideAddress[32]; //!< If we want to override the connection address
 
     u8 gcport; //!< the gamecube port we are listening on (starting from 0)
     char receivedMsgBuffer[MAX_LINK_MSG_SIZE]; //!< Where we store data that has been recived from the gba/server

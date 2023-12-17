@@ -249,7 +249,14 @@ static void *seriald (SerialConnector *connector)
 						}
 
                         memset(ipv4Port, 0, IP_BUFFER_SIZE);
-                        strcpy(ipv4Port, connector->receivedMsgBuffer);
+						if (connector->overrideAddress[0] == 0)
+						{
+							strcpy(ipv4Port, connector->receivedMsgBuffer);
+						}
+						else
+						{
+                        	strcpy(ipv4Port, connector->overrideAddress);
+						}
 						tcpClient->Connect(ipv4Port);
 					}
 

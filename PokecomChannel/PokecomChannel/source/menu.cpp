@@ -122,7 +122,7 @@ static const char * resolveNetworkMessage(u8 state, TCPClient* client)
  *
  * Displays a window to the user while trying to connect to the network
  ***************************************************************************/
-int NetworkTestPopup(const char *title, const char *msg, const char *btn1Label, GuiSound* bgMusic)
+int NetworkTestPopup(const char *title, const char *msg, const char *btn1Label, GuiSound* bgMusic, LinkCableClient * gbas[4])
 {
 	int choice = -1;
 
@@ -241,6 +241,11 @@ int NetworkTestPopup(const char *title, const char *msg, const char *btn1Label, 
 					connectingSuccessSound.SetVolume(20);
 					connectingSuccessSound.Play();
 					infoTxt.SetVisible(true);
+
+					strcpy(gbas[0]->connector.overrideAddress, ipv4);
+					strcpy(gbas[1]->connector.overrideAddress, ipv4);
+					strcpy(gbas[2]->connector.overrideAddress, ipv4);
+					strcpy(gbas[3]->connector.overrideAddress, ipv4);
 				}
 				else if (lastConnectionState != CONNECTION_READY)
 				{
@@ -522,6 +527,15 @@ static int MenuSettings(GuiSound* bgMusic, LinkCableClient * gbas[4])
 	exitBtn.SetTrigger(&trigHome);
 	exitBtn.SetEffectGrow();
 
+	isP1Connected = false;
+	isP2Connected = false;
+	isP3Connected = false;
+	isP4Connected = false;
+	isP1Named = false;
+	isP2Named = false;
+	isP3Named = false;
+	isP4Named = false;
+
 	HaltGui();
 	GuiWindow w(screenwidth, screenheight);
 	w.Append(&titleTxt);
@@ -694,7 +708,7 @@ static int MenuSettings(GuiSound* bgMusic, LinkCableClient * gbas[4])
  * NetworkConfigurationMenu
  ***************************************************************************/
 
-static int NetworkConfigurationMenu(GuiSound* bgMusic)
+static int NetworkConfigurationMenu(GuiSound* bgMusic, LinkCableClient * gbas[4])
 {
 	int menu = MENU_NONE;
 
@@ -771,7 +785,8 @@ static int NetworkConfigurationMenu(GuiSound* bgMusic)
 			NetworkTestPopup(gettext("networkTest.title"),
 				             gettext("networkTest.attemptingConnection"),
 				             gettext("networkTest.close"), 
-				             bgMusic);
+				             bgMusic,
+							 gbas);
 		}
 	}
 	HaltGui();
@@ -917,7 +932,7 @@ void MainMenu(int menu, Logger * LOGGER, LinkCableClient * gbas[4])
 				currentMenu = MenuSettings(bgMusic, gbas);
 				break;
 			case MENU_SETTINGS_NETWORK:
-				currentMenu = NetworkConfigurationMenu(bgMusic);
+				currentMenu = NetworkConfigurationMenu(bgMusic, gbas);
 				break;
 			case MENU_DEBUG:
 				currentMenu = DebugMenu(bgMusic, LOGGER);
