@@ -51,6 +51,8 @@ typedef struct {
     u8 requestReceive; //!< If we are waiting to fetch data
     u8 requestStop; //!< If we are waiting to stop
 
+    char serverName[32]; //!< Server the player is currently connected to
+
     u8 gcport; //!< the gamecube port we are listening on (starting from 0)
     char receivedMsgBuffer[MAX_LINK_MSG_SIZE]; //!< Where we store data that has been recived from the gba/server
     Logger * LOGGER; //!< to help debug
@@ -79,8 +81,6 @@ enum {
 typedef struct {
     u8 internalState; //!<  State the (internal) current connection is in i.e sending data, waiting e.t.c
 	u8 connectionResult; //!< State the (externally visible) client is in i.e if it's connected or has had an error 
-
-    char serverName[32];
 
     bool requestSend; //!< If there is data waiting to be sent
     bool requestFetch; //!< If we are waiting to fetch data

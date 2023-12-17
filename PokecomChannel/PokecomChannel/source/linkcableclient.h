@@ -69,6 +69,10 @@ public:
     bool HasPlayerName();
     //! Returns the name of the player
     char * GetPlayerName();
+    //! Returns true if client has a namer for the server
+    bool HasServerName();
+    //! Returns the name of the server
+    char * GetServerName();
 
     lwp_t serd_handle; //!< Handle for the thread doing the connection
 

@@ -68,7 +68,7 @@ GuiGbaConnections::GuiGbaConnections(char * serverName)
     playerTagImg[3] = new GuiImage(playerTag);
     playerTagImg[3]->SetPosition(435, 260);
     playerTagImg[3]->SetParent(this);
-    
+
     playerTagText[3] = new GuiText(gettext("connectionsUI.playerWaiting"), 12, (GXColor){230, 230, 230, 0xff});
 	playerTagText[3]->SetAlignment(ALIGN_H::CENTRE, ALIGN_V::MIDDLE);
 	playerTagText[3]->SetPosition(0, 0);
@@ -224,6 +224,16 @@ void GuiGbaConnections::SetPlayerName(int playerNo, char * name)
         return;
 
     playerTagText[playerNo - 1]->SetText(name);
+}
+
+void GuiGbaConnections::SetServerName(char * name)
+{
+    globeImg->Tint(10, 10, 10);
+    delete serverTagText;
+    serverTagText = new GuiText(name, 14, (GXColor){70, 130, 180, 0xff});
+    serverTagText->SetAlignment(ALIGN_H::CENTRE, ALIGN_V::MIDDLE);
+	serverTagText->SetPosition(0, 0);
+    serverTagText->SetParent(globeImg);
 }
 
 void GuiGbaConnections::Draw()

@@ -73,7 +73,7 @@ void TCPClient::Connect(char * addr)
 	} 
     else 
     {
-		this->connector.internalState = CONNECTION_ERROR_NO_NETWORK_DEVICE;
+		this->connector.connectionResult = CONNECTION_ERROR_NO_NETWORK_DEVICE;
 	}
 }
 
@@ -97,7 +97,7 @@ char* TCPClient::GetResponse()
 
 char* TCPClient::GetServerName()
 {
-	return this->connector.serverName;
+	return this->connector.serialConnector->serverName;
 }
 
 u8 TCPClient::GetConnectionResult()
@@ -211,7 +211,7 @@ static void *httpd (TCPConnector *connector)
                     connector->connectionResult = CONNECTION_SUCCESS;
 					connector->internalState = TCP_STATE_WAITING;
 
-					strcpy(connector->serverName, connector->fetchedMsgBuffer + 3);
+					strcpy(connector->serialConnector->serverName, connector->fetchedMsgBuffer + 3);
 					
 					conn = net_send(sock, WELCOME_REQUEST, strlen(WELCOME_REQUEST), TCP_FLAGS);
 

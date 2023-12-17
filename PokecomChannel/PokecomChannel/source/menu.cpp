@@ -13,6 +13,7 @@
 #include <stdlib.h>
 #include <wiiuse/wpad.h>
 #include <string.h>
+#include <string>
 
 #include "libwiigui/gui.h"
 #include "menu.h"
@@ -33,6 +34,16 @@ static bool guiHalt = true;
 
 char ipv4[32] = "127.0.0.1:9000";
 char serverName[32] = "\0";
+bool serverSet = false;
+
+bool isP1Connected = false;
+bool isP2Connected = false;
+bool isP3Connected = false;
+bool isP4Connected = false;
+bool isP1Named = false;
+bool isP2Named = false;
+bool isP3Named = false;
+bool isP4Named = false;
 
 /****************************************************************************
  * ResumeGui
@@ -76,7 +87,7 @@ static const char * resolveNetworkMessage(u8 state, TCPClient* client)
 			strcat( concatString, client->GetServerName());
 
 			strcpy(serverName, client->GetServerName());
-
+			serverSet = true;
 			return concatString;
 		}
 		break;
@@ -189,6 +200,7 @@ int NetworkTestPopup(const char *title, const char *msg, const char *btn1Label, 
 	connectingSound.Play();
 
 	u8 lastConnectionState = CONNECTION_READY;
+	u8 connectionRetries = 0;
 
 	// Make sure a minimum amount of refreshes has always happened before we display a result
 	int updatesBeforeResult = 0;
@@ -210,7 +222,16 @@ int NetworkTestPopup(const char *title, const char *msg, const char *btn1Label, 
 		}
 		else if (updatesBeforeResult > 200000)
 		{
-			if (lastConnectionState != client->GetConnectionResult())
+
+			if ((client->GetConnectionResult() > CONNECTION_ERROR_INVALID_RESPONSE) && connectionRetries < 3)
+			{
+				updatesBeforeResult = 0;
+				lastConnectionState = CONNECTION_READY;
+				connectionRetries++;
+				client = new TCPClient();
+				client->TestConnection(ipv4);
+			} 
+			else if (lastConnectionState != client->GetConnectionResult())
 			{
 				lastConnectionState = client->GetConnectionResult();
 
@@ -515,15 +536,7 @@ static int MenuSettings(GuiSound* bgMusic, LinkCableClient * gbas[4])
 	mainWindow->Append(&w);
 	ResumeGui();
 
-	bool isP1Connected = false;
-	bool isP2Connected = false;
-	bool isP3Connected = false;
-	bool isP4Connected = false;
 
-	bool isP1Named = false;
-	bool isP2Named = false;
-	bool isP3Named = false;
-	bool isP4Named = false;
 
 	int soundFadeLoop = 0;	
 	bool isMuted = bgMusic->GetVolume() == 0;
@@ -552,9 +565,6 @@ static int MenuSettings(GuiSound* bgMusic, LinkCableClient * gbas[4])
 				menu = MENU_EXIT;
 			}
 		}
-
-		// TODO: Check if the server name has updated and update is if so or we can just pass a pointer to the server name
-		// TODO: Check if the player name in the manager has changes and update it (or just pass a pointer to the ) 
 
 		/* Handle GBA connections in the ui */
 
@@ -601,6 +611,56 @@ static int MenuSettings(GuiSound* bgMusic, LinkCableClient * gbas[4])
 		{
 			connections.SetPlayerName(4, gbas[3]->GetPlayerName());
 			isP4Named = true;
+		}
+
+		
+		if (!serverSet)
+		{
+			if (isP1Named)
+			{
+				if (gbas[0]->HasServerName())
+				{
+					strcpy(serverName, gbas[0]->GetServerName());
+					connections.SetServerName(serverName);
+					serverSet = true;
+				}
+			} 
+		}
+		if (!serverSet)
+		{
+			if (isP2Named)
+			{
+				if (gbas[1]->HasServerName())
+				{
+					strcpy(serverName, gbas[1]->GetServerName());
+					connections.SetServerName(serverName);
+					serverSet = true;
+				}
+			} 
+		}
+		if (!serverSet)
+		{
+			if (isP3Named)
+			{
+				if (gbas[2]->HasServerName())
+				{
+					strcpy(serverName, gbas[2]->GetServerName());
+					connections.SetServerName(serverName);
+					serverSet = true;
+				}
+			} 
+		}
+		if (!serverSet)
+		{
+			if (isP4Named)
+			{
+				if (gbas[0]->HasServerName())
+				{
+					strcpy(serverName, gbas[0]->GetServerName());
+					connections.SetServerName(serverName);
+					serverSet = true;
+				}
+			} 
 		}
 
 		if (!isMuted && 

@@ -36,9 +36,6 @@ LinkCableClient::~LinkCableClient()
 
 void LinkCableClient::Start()
 {
-	this->connector.LOGGER->Log((char *) "Starting link");
-
-
     this->connector.requestSend = 0;
     this->connector.requestReceive = 0;
     this->connector.requestStop = 0;
@@ -68,6 +65,16 @@ bool LinkCableClient::HasPlayerName()
 char * LinkCableClient::GetPlayerName()
 {
 	return this->connector.playerData.playerName;
+}
+
+bool LinkCableClient::HasServerName()
+{
+	return this->connector.serverName[0] != 0;
+}
+
+char * LinkCableClient::GetServerName()
+{
+	return this->connector.serverName;
 }
 
 static void *seriald (SerialConnector *connector)

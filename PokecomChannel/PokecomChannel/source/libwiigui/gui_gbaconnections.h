@@ -9,7 +9,8 @@ public:
     void Draw();
     void ConnectPlayer(int player);
 	void Update(GuiTrigger * t);
-    void SetPlayerName(int player, char * name);
+    void SetPlayerName(int playerNo, char * name);
+    void SetServerName(char * name);
 protected:
     void HidePlayerTag(int playerNo);
     void ShowPlayerTag(int playerNo);
