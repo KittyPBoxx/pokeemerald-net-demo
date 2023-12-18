@@ -4,6 +4,8 @@ node_modules
 **/*.d
 **/*.map
 
+CelioServer/dist/
+
 PokecomChannel/**/build/*
 
 pokeemerald/*.exe

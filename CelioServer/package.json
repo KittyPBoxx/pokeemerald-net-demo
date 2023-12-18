@@ -5,12 +5,19 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
+    "prod": "npx pkg index.js --config package.json --out-path dist",
     "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "pkg": {
+    "assets": "web-src/*"
   },
   "author": "kittypboxx",
   "license": "ISC",
   "dependencies": {
     "express": "^4.18.2",
     "express-basic-auth": "^1.2.1"
+  },
+  "devDependencies": {
+    "pkg": "^5.8.1"
   }
 }

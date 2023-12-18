@@ -1896,5 +1896,3 @@ const itemsList = `
 <div class="item" data-value="374"> SAPPHIRE       </div>
 <div class="item" data-value="375"> MAGMA EMBLEM   </div>
 <div class="item" data-value="376"> OLD SEA MAP    </div>`
-
-setupPage();

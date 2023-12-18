@@ -24,8 +24,15 @@ class WebServerHelper {
             res.sendFile( __dirname + "/" + baseDirectory + "/" + "index.html" );
         });
 
+        app.get('/styles.css', function (req, res) {
+            res.sendFile( __dirname + "/" + baseDirectory + "/" + "styles.css" );
+        });
+
+        app.get('/ui.js', function (req, res) {
+            res.sendFile( __dirname + "/" + baseDirectory + "/" + "ui.js" );
+        });
+
         app.get('/client-list', function (req, res) {
-            console.log('GET to fetch client list');
             res.json(Object.fromEntries(tcpRequestHandler.clientList));
         });
 
