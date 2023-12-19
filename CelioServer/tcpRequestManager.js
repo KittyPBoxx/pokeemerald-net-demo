@@ -14,13 +14,12 @@ const MART_REQUEST               = StringHelper.asciiToByteArray("MA");
 // Gift Egg
 const GIFT_EGG_REQUEST           = StringHelper.asciiToByteArray("GE");
 // List Players
-const LIST_PLAYERS_REQUEST       = StringHelper.asciiToByteArray("LP");
+const LIST_PLAYERS_REQUEST       = StringHelper.asciiToByteArray("LP"); // Not yet implimented
 // Mail
-const SEND_MAIL_REQUEST          = StringHelper.asciiToByteArray("SM");
-const RECEIVE_MAIL_REQUEST       = StringHelper.asciiToByteArray("RM");
+const SEND_MAIL_REQUEST          = StringHelper.asciiToByteArray("SM"); // Not yet implimented
+const RECEIVE_MAIL_REQUEST       = StringHelper.asciiToByteArray("RM"); // Not yet implimented
 // Wonder Trade
-const SEND_TRADE_DATA_REQUEST    = StringHelper.asciiToByteArray("ST");
-const RECEIVE_TRADE_DATA_REQUEST = StringHelper.asciiToByteArray("RT");
+const TRADE_REQUEST              = StringHelper.asciiToByteArray("TR");
 
 class TcpRequestHelper {
 
@@ -113,15 +112,10 @@ class TcpRequestHelper {
         // gba checks the first section of data, 
         // if it is empty -> can't find trade partner
         // else start trade animation to cover downloading the data
-        requestHandler.registerHandler(SEND_TRADE_DATA_REQUEST, (conn, data, clientList) => {
+        requestHandler.registerHandler(TRADE_REQUEST, (conn, data, clientList) => {
             // Store player selected data
             console.log("Not yet implimented");
         });
-        requestHandler.registerHandler(RECEIVE_TRADE_DATA_REQUEST, (conn, data, clientList) => {
-            // Return the first message in that clients mail buffer and remove it
-            console.log("Not yet implimented");
-        });
-
 
         return requestHandler;
     }

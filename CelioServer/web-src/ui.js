@@ -29,7 +29,7 @@ function setupPage() {
     refreshMart();
     refreshGiftEgg();
 
-    setInterval(refreshClientList, 1000 * 30)
+    setInterval(refreshClientList, 1000 * 15)
 }
 
 function refreshDropdowns() {
@@ -57,33 +57,38 @@ function updateItemSprite(element, imageId) {
 
 function refreshClientList() {
     (async () => {
-        const rawResponse = await fetch('/client-list', {
-          method: 'GET',
-          headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json'
-          }
-        });
-        const content = await rawResponse.json();
-        console.log("Refreshing Client List " + JSON.stringify(content));
-        const clientMap = new Map(Object.entries(content));
+        try {
+            const rawResponse = await fetch('/client-list', {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            }
+            });
 
-        let titleElement = document.getElementById("connectedPlayersTitle");
-        titleElement.innerHTML = titleElement.innerHTML.split("-")[0] + " - " + clientMap.size + " Connected";
-
-        let bodyElement = document.getElementById("connectedPlayersBody");
-        bodyElement.innerHTML = "";
-        let finalBody = "";
-        clientMap.forEach(c => {
-            let row = document.createElement("tr");
-            row.innerHTML  = "<td>" + c.name                     + "</td>";
-            row.innerHTML += "<td>" + c.id                       + "</td>";
-            row.innerHTML += "<td>" + c.game                     + "</td>";
-            row.innerHTML += "<td>" + c.gender                   + "</td>";
-            row.innerHTML += "<td>" + (c.lastSentMail || "N/A")  + "</td>";
-            finalBody +=  row.outerHTML;
-        });
-        bodyElement.innerHTML = finalBody;
+            const content = await rawResponse.json();
+            //console.log("Refreshing Client List " + JSON.stringify(content));
+            const clientMap = new Map(Object.entries(content));
+    
+            let titleElement = document.getElementById("connectedPlayersTitle");
+            titleElement.innerHTML = titleElement.innerHTML.split("-")[0] + " - " + clientMap.size + " Connected";
+    
+            let bodyElement = document.getElementById("connectedPlayersBody");
+            bodyElement.innerHTML = "";
+            let finalBody = "";
+            clientMap.forEach(c => {
+                let row = document.createElement("tr");
+                row.innerHTML  = "<td>" + c.name                     + "</td>";
+                row.innerHTML += "<td>" + c.id                       + "</td>";
+                row.innerHTML += "<td>" + c.game                     + "</td>";
+                row.innerHTML += "<td>" + c.gender                   + "</td>";
+                row.innerHTML += "<td>" + (c.lastSentMail || "N/A")  + "</td>";
+                finalBody +=  row.outerHTML;
+            });
+            bodyElement.innerHTML = finalBody;
+        } catch (error) {
+            console.warn("Could not refresh clients");
+        }
     })();
 }
 

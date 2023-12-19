@@ -41,6 +41,7 @@ static const u8 sServerName[] = _("INCOMMING...\n");
 
 static const u8 sDot[] = _("·");
 static const u8 sWaitingMessage[] = _("Connecting To Server:");
+static const u8 sExchangeMessage[] = _("Partner Found! Link starting:");
 
 static const u8 trainerName[] = _("NET");
 
@@ -74,6 +75,12 @@ static void SetupForGiftEggTask();
 static void Task_GiftEggCancel(u8 taskId);
 static void Task_GiftEggProcess(u8 taskId);
 static void Task_EndGiftEggConnection(u8 taskId);
+
+// NET_CONN_TRADE_FUNC
+static void SetupForTradeTask();
+static void Task_TradeCancel(u8 taskId);
+static void Task_TradeProcess(u8 taskId);
+static void Task_EndTradeConnection(u8 taskId);
 
 static void DoTransferDataBlock(u8 taskId);
 static void DoReceiveDataBlock(u8 taskId);
@@ -126,7 +133,8 @@ static void (* const sNetConnFunctions[])(void) =
     [NET_CONN_START_LINK_FUNC]    = SetupForLinkTask,
     [NET_CONN_START_BATTLE_FUNC]  = SetupForDownloadBattleTask,
     [NET_CONN_START_MART_FUNC]    = SetupForOnlineMartTask,
-    [NET_CONN_START_EGG_FUNC]     = SetupForGiftEggTask
+    [NET_CONN_START_EGG_FUNC]     = SetupForGiftEggTask,
+    [NET_CONN_TRADE_FUNC]         = SetupForTradeTask
 };
 
 void CallNetworkFunction(void)
@@ -139,6 +147,33 @@ void CallNetworkFunction(void)
     if (FindTaskIdByFunc(Task_NetworkTaskLoop) == TASK_NONE)
         CreateTask(Task_NetworkTaskLoop, 80);
 }
+
+static u8 DoWaitTextAnimation(u16 duration, const u8 message[])
+{
+    if (sSendRecvMgr.repeatedStepCount == 0)
+    {
+        LoadMessageBoxAndFrameGfx(0, TRUE);
+        VBlankIntrWait(); VBlankIntrWait();
+        AddTextPrinterParameterized(0, FONT_NORMAL, message, 0, 1, 0, NULL);
+        sSendRecvMgr.repeatedStepCount++;
+    }
+    else if (sSendRecvMgr.repeatedStepCount <= duration)
+    {
+        VBlankIntrWait(); VBlankIntrWait();
+        if (sSendRecvMgr.repeatedStepCount % 10 == 0)
+        {
+            AddTextPrinterParameterized(0, FONT_NORMAL, sDot, ((sSendRecvMgr.repeatedStepCount - 1) * 8) / 10, 16, 0, NULL);
+        }
+        sSendRecvMgr.repeatedStepCount++;
+    }
+    else
+    {
+        sSendRecvMgr.repeatedStepCount = 0;
+        return 1;
+    }
+    return 0;
+}
+
 
 static void Task_NetworkTaskLoop(u8 taskId)
 {
@@ -527,30 +562,9 @@ static void Task_LinkupProcess(u8 taskId)
             configureSendRecvMgr(NET_CONN_CINF_REQ, 0, 0, NET_CONN_STATE_SEND, LINKUP_WAIT_FOR_SERVER_TO_CONNECT);
             break;
 
-
         case LINKUP_WAIT_FOR_SERVER_TO_CONNECT:
-            if (sSendRecvMgr.repeatedStepCount == 0)
-            {
-                DebugPrintfLevel(MGBA_LOG_DEBUG, "--- LINKUP_WAIT_FOR_SERVER_TO_CONNECT");
-                LoadMessageBoxAndFrameGfx(0, TRUE);
-                VBlankIntrWait(); VBlankIntrWait();
-                AddTextPrinterParameterized(0, FONT_NORMAL, sWaitingMessage, 0, 1, 0, NULL);
-                sSendRecvMgr.repeatedStepCount++;
-            }
-            else if (sSendRecvMgr.repeatedStepCount <= 60)
-            {
-                VBlankIntrWait(); VBlankIntrWait();
-                if (sSendRecvMgr.repeatedStepCount % 10 == 0)
-                {
-                    AddTextPrinterParameterized(0, FONT_NORMAL, sDot, ((sSendRecvMgr.repeatedStepCount - 1) * 8) / 10, 16, 0, NULL);
-                }
-                sSendRecvMgr.repeatedStepCount++;
-            }
-            else
-            {
+            if (DoWaitTextAnimation(60, sWaitingMessage) > 0)
                 sSendRecvMgr.nextProcessStep = LINKUP_REQUEST_NETWORK_STATUS;
-                sSendRecvMgr.repeatedStepCount = 0;
-            }
             break;
 
         case LINKUP_REQUEST_NETWORK_STATUS:
@@ -628,12 +642,6 @@ enum {
     DOWNLOAD_BATTLE_FINISH
 };
 
-// NET_CONN_FETCH_BATTLE_FUNC
-static void SetupForDownloadBattleTask();
-static void Task_DownloadBattleCancel(u8 taskId);
-static void Task_DownloadBattleProcess(u8 taskId);
-static void Task_EndDownloadBattleConnection(u8 taskId);
-
 static void SetupForDownloadBattleTask()
 {
     sSendRecvMgr.allowCancel       = TRUE; 
@@ -673,28 +681,8 @@ static void Task_DownloadBattleProcess(u8 taskId)
         case DOWNLOAD_BATTLE_WAIT_FOR_SERVER: // Wait for data to be pulled from the server
             // TODO: This is just a delay, and hopes the wii has pulled all the data by the time the delay ends
             // We need a way to query the wii and find out if it's actually finished pulling data from the server
-            if (sSendRecvMgr.repeatedStepCount == 0)
-            {
-                DebugPrintfLevel(MGBA_LOG_DEBUG, "--- DOWNLOAD_BATTLE_WAIT_FOR_SERVER");
-                LoadMessageBoxAndFrameGfx(0, TRUE);
-                VBlankIntrWait(); VBlankIntrWait();
-                AddTextPrinterParameterized(0, FONT_NORMAL, sWaitingMessage, 0, 1, 0, NULL);
-                sSendRecvMgr.repeatedStepCount++;
-            }
-            else if (sSendRecvMgr.repeatedStepCount <= 40)
-            {
-                VBlankIntrWait(); VBlankIntrWait();
-                if (sSendRecvMgr.repeatedStepCount % 10 == 0)
-                {
-                    AddTextPrinterParameterized(0, FONT_NORMAL, sDot, ((sSendRecvMgr.repeatedStepCount - 1) * 8) / 10, 16, 0, NULL);
-                }
-                sSendRecvMgr.repeatedStepCount++;
-            }
-            else
-            {
+            if (DoWaitTextAnimation(60, sWaitingMessage) > 0)
                 sSendRecvMgr.nextProcessStep = DOWNLOAD_BATTLE_RECIEVE_DATA;
-                sSendRecvMgr.repeatedStepCount = 0;
-            }
             break;
 
         case DOWNLOAD_BATTLE_RECIEVE_DATA: // Pull back the data from the wii (reading at address chanel 0x0F and writing to gStringVar3)
@@ -718,7 +706,7 @@ static void Task_DownloadBattleProcess(u8 taskId)
             FillEReaderTrainerWithPlayerData();
             StringFill(gSaveBlock2Ptr->frontier.ereaderTrainer.name, CHAR_SPACER, PLAYER_NAME_LENGTH);
             StringCopy_PlayerName(gSaveBlock2Ptr->frontier.ereaderTrainer.name, trainerName);
-            gSaveBlock2Ptr->frontier.ereaderTrainer.facilityClass = FACILITY_CLASS_RS_BRENDAN;
+            gSaveBlock2Ptr->frontier.ereaderTrainer.facilityClass = FACILITY_CLASS_RS_BRENDAN;           
 
             gSpecialVar_0x8003 = 1;
 
@@ -796,12 +784,6 @@ enum {
     DOWNLOAD_MART_FINISH
 };
 
-// NET_CONN_ONLINE_MART_FUNC
-static void SetupForOnlineMartTask();
-static void Task_OnlineMartCancel(u8 taskId);
-static void Task_OnlineMartProcess(u8 taskId);
-static void Task_EndOnlineMartConnection(u8 taskId);
-
 static void SetupForOnlineMartTask()
 {
     sSendRecvMgr.allowCancel       = TRUE;
@@ -839,28 +821,8 @@ static void Task_OnlineMartProcess(u8 taskId)
             break;
 
         case DOWNLOAD_MART_WAIT_FOR_SERVER:
-            if (sSendRecvMgr.repeatedStepCount == 0)
-            {
-                DebugPrintfLevel(MGBA_LOG_DEBUG, "--- DOWNLOAD_MART_WAIT_FOR_SERVER");
-                LoadMessageBoxAndFrameGfx(0, TRUE);
-                VBlankIntrWait(); VBlankIntrWait();
-                AddTextPrinterParameterized(0, FONT_NORMAL, sWaitingMessage, 0, 1, 0, NULL);
-                sSendRecvMgr.repeatedStepCount++;
-            }
-            else if (sSendRecvMgr.repeatedStepCount <= 40)
-            {
-                VBlankIntrWait(); VBlankIntrWait();
-                if (sSendRecvMgr.repeatedStepCount % 10 == 0)
-                {
-                    AddTextPrinterParameterized(0, FONT_NORMAL, sDot, ((sSendRecvMgr.repeatedStepCount - 1) * 8) / 10, 16, 0, NULL);
-                }
-                sSendRecvMgr.repeatedStepCount++;
-            }
-            else
-            {
+            if (DoWaitTextAnimation(40, sWaitingMessage) > 0)
                 sSendRecvMgr.nextProcessStep = DOWNLOAD_MART_RECEIVE_DATA;
-                sSendRecvMgr.repeatedStepCount = 0;
-            }
             break;
 
         case DOWNLOAD_MART_RECEIVE_DATA:
@@ -923,12 +885,6 @@ enum {
     DOWNLOAD_GIFT_EGG_FINISH
 };
 
-static void SetupForGiftEggTask();
-static void Task_GiftEggCancel(u8 taskId);
-static void Task_GiftEggProcess(u8 taskId);
-static void Task_EndGiftEggConnection(u8 taskId);
-
-
 static void SetupForGiftEggTask()
 {
     sSendRecvMgr.allowCancel       = TRUE;
@@ -966,28 +922,8 @@ static void Task_GiftEggProcess(u8 taskId)
             break;
 
         case DOWNLOAD_GIFT_EGG_WAIT_FOR_SERVER:
-            if (sSendRecvMgr.repeatedStepCount == 0)
-            {
-                DebugPrintfLevel(MGBA_LOG_DEBUG, "--- DOWNLOAD_GIFT_EGG_WAIT_FOR_SERVER");
-                LoadMessageBoxAndFrameGfx(0, TRUE);
-                VBlankIntrWait(); VBlankIntrWait();
-                AddTextPrinterParameterized(0, FONT_NORMAL, sWaitingMessage, 0, 1, 0, NULL);
-                sSendRecvMgr.repeatedStepCount++;
-            }
-            else if (sSendRecvMgr.repeatedStepCount <= 40)
-            {
-                VBlankIntrWait(); VBlankIntrWait();
-                if (sSendRecvMgr.repeatedStepCount % 10 == 0)
-                {
-                    AddTextPrinterParameterized(0, FONT_NORMAL, sDot, ((sSendRecvMgr.repeatedStepCount - 1) * 8) / 10, 16, 0, NULL);
-                }
-                sSendRecvMgr.repeatedStepCount++;
-            }
-            else
-            {
+            if (DoWaitTextAnimation(40, sWaitingMessage) > 0)
                 sSendRecvMgr.nextProcessStep = DOWNLOAD_GIFT_EGG_RECEIVE_DATA;
-                sSendRecvMgr.repeatedStepCount = 0;
-            }
             break;
 
         case DOWNLOAD_GIFT_EGG_RECEIVE_DATA:
@@ -1023,6 +959,133 @@ static void Task_GiftEggProcess(u8 taskId)
 }
 
 static void Task_EndGiftEggConnection(u8 taskId) 
+{
+    NetConnDisableSerial();
+    StopFieldMessage();
+    ScriptContext_Enable();
+    DestroyTask(taskId);
+}
+
+/**
+*   =====================================================================
+*   === NET_CONN_TRADE_FUNC                                           ===
+*   =====================================================================
+*/
+enum {
+    TRADE_SEND_REQUEST = 0,
+    TRADE_APPEND_MON_DATA, 
+    TRADE_TRANSMIT_REQUEST, 
+    TRADE_WAIT_LONG_FOR_SERVER, 
+    TRADE_RECEIVE_SMALL_DATA, 
+    TRADE_VERIFY_PARTNER_FOUND,
+    TRADE_WAIT_SHORT_FOR_SERVER, 
+    TRADE_RECEIVE_FULL_DATA, 
+    TRADE_FINISH 
+};
+
+static void SetupForTradeTask()
+{
+    sSendRecvMgr.allowCancel       = TRUE;
+    sSendRecvMgr.retriesLeft       = MAX_CONNECTION_RETRIES;
+    sSendRecvMgr.onFinish          = Task_EndTradeConnection;
+    sSendRecvMgr.onCancel          = Task_TradeCancel;
+    sSendRecvMgr.onProcess         = Task_TradeProcess;
+    sSendRecvMgr.nextProcessStep   = TRADE_SEND_REQUEST;
+    sSendRecvMgr.disableChecks     = FALSE;
+    sSendRecvMgr.repeatedStepCount = 0;
+    gSpecialVar_0x8003 = 0;
+}
+
+static void Task_TradeCancel(u8 taskId)
+{
+    Task_EndLinkupConnection(taskId);
+}
+
+static void Task_TradeProcess(u8 taskId)
+{
+    switch (sSendRecvMgr.nextProcessStep)
+    {
+        case TRADE_SEND_REQUEST:
+            DebugPrintfLevel(MGBA_LOG_DEBUG, "--- TRADE_SEND_REQUEST");
+            gStringVar3[0] = 'T'; gStringVar3[1] = 'R'; gStringVar3[2] = '_'; gStringVar3[3] = '0';
+            configureSendRecvMgr(NET_CONN_SEND_REQ, (vu32 *) &gStringVar3[0], 4, NET_CONN_STATE_SEND, TRADE_APPEND_MON_DATA);
+            break;
+
+        case TRADE_APPEND_MON_DATA:
+            DebugPrintfLevel(MGBA_LOG_DEBUG, "--- TRADE_APPEND_MON_DATA");
+            sSendRecvMgr.retryPoint = TRADE_APPEND_MON_DATA;
+            configureSendRecvMgr(NET_CONN_SCH1_REQ, (vu32 *) &gPlayerParty[0], sizeof(struct Pokemon), NET_CONN_STATE_SEND, TRADE_TRANSMIT_REQUEST);
+            break;
+
+        case TRADE_TRANSMIT_REQUEST:
+            DebugPrintfLevel(MGBA_LOG_DEBUG, "--- TRADE_TRANSMIT_REQUEST");
+            sSendRecvMgr.disableChecks = TRUE; 
+            sSendRecvMgr.retryPoint = TRADE_TRANSMIT_REQUEST;
+            sSendRecvMgr.allowCancel = FALSE;
+            configureSendRecvMgr(NET_CONN_TRAN_REQ, 0, 16 + sizeof(struct Pokemon), NET_CONN_STATE_SEND, TRADE_WAIT_LONG_FOR_SERVER);
+            break;
+
+        case TRADE_WAIT_LONG_FOR_SERVER:
+            if (DoWaitTextAnimation(80, sWaitingMessage) > 0)
+                sSendRecvMgr.nextProcessStep = TRADE_RECEIVE_SMALL_DATA;
+            break;
+
+        case TRADE_RECEIVE_SMALL_DATA:
+            // We don't know when the other player connected to us (or if there is a connection at all). 
+            // So wait. Pull a little bit of data. If we got some data wait again. Then pull the whole thing  
+            DebugPrintfLevel(MGBA_LOG_DEBUG, "--- TRADE_RECEIVE_SMALL_DATA");
+            sSendRecvMgr.disableChecks = FALSE;
+            if (sSendRecvMgr.repeatedStepCount == 0)
+            {
+                CpuFill32(0, &gEnemyParty, sizeof(gEnemyParty));     
+                sSendRecvMgr.retryPoint = TRADE_RECEIVE_SMALL_DATA;
+            }
+            configureSendRecvMgrChunked(NET_CONN_RCHF0_REQ, (vu32 *) &gEnemyParty[0], 16, NET_CONN_STATE_RECEIVE, TRADE_VERIFY_PARTNER_FOUND, MINIMUM_CHUNK_SIZE);
+            break;
+
+        case TRADE_VERIFY_PARTNER_FOUND:
+        {
+            u8 i;
+            gSpecialVar_0x8003 = 1; // No partner found
+            sSendRecvMgr.nextProcessStep = TRADE_FINISH;
+            for (i = 0; i < 16; i++)
+            {
+                if ((*(char*) (&gEnemyParty[0] + i)) != 0)
+                {
+                    gSpecialVar_0x8003 = 0; // Back to error state
+                    sSendRecvMgr.nextProcessStep = TRADE_WAIT_SHORT_FOR_SERVER;
+                }
+            }
+            break;
+        }
+
+        case TRADE_WAIT_SHORT_FOR_SERVER:
+            if (DoWaitTextAnimation(40, sExchangeMessage) > 0)
+                sSendRecvMgr.nextProcessStep = TRADE_RECEIVE_FULL_DATA;
+            break;
+
+        case TRADE_RECEIVE_FULL_DATA:
+            DebugPrintfLevel(MGBA_LOG_DEBUG, "--- TRADE_RECEIVE_FULL_DATA");
+            if (sSendRecvMgr.repeatedStepCount == 0)
+            {
+                CpuFill32(0, &gEnemyParty, sizeof(gEnemyParty));     
+                sSendRecvMgr.retryPoint = TRADE_RECEIVE_FULL_DATA;
+            }
+            configureSendRecvMgrChunked(NET_CONN_RCHF0_REQ, (vu32 *) &gEnemyParty[0], sizeof(struct Pokemon), NET_CONN_STATE_RECEIVE, TRADE_FINISH, MINIMUM_CHUNK_SIZE);
+            break;
+
+        case TRADE_FINISH:
+        default:
+            DebugPrintfLevel(MGBA_LOG_DEBUG, "--- TRADE_FINISH");
+            sSendRecvMgr.state = NET_CONN_STATE_DONE;
+            // TODO: stuff with the data
+            break;
+    }
+
+    gTasks[taskId].func = Task_NetworkTaskLoop;
+}
+
+static void Task_EndTradeConnection(u8 taskId) 
 {
     NetConnDisableSerial();
     StopFieldMessage();
