@@ -28,8 +28,10 @@ LilycoveCity_GTS_F2_EventScript_NetTrainer::
 	setvar VAR_0x8004, SPECIAL_BATTLE_EREADER
 	setvar VAR_0x8005, 0
 	special DoSpecialTrainerBattle
-	closemessage
+	waitstate
+	frontier_restorehelditems
 	special HealPlayerParty
+	closemessage
 	releaseall
 	end
 
@@ -102,17 +104,17 @@ LilycoveCity_GTS_F2_EventScript_AlreadyObtained::
 	msgbox LilycoveCity_GTS_F2_Text_AlreadyObtained, MSGBOX_NPC
 	end
 
+LilycoveCity_GTS_F2_EventScript_NoRoomForEgg::
+	msgbox LilycoveCity_GTS_F2_Text_NoRoomForThisEgg, MSGBOX_DEFAULT
+	release
+	end
+
 LilycoveCity_GTS_F2_Text_TakeGoodCareOfEgg::
 	.string "Take good care of the EGG.$"
 
 LilycoveCity_GTS_F2_Text_AlreadyObtained::
 	.string "It seems you have already obtained\n"
 	.string "this gift egg before.$"
-
-LilycoveCity_GTS_F2_EventScript_NoRoomForEgg::
-	msgbox LilycoveCity_GTS_F2_Text_NoRoomForThisEgg, MSGBOX_DEFAULT
-	release
-	end
 
 LilycoveCity_GTS_F2_Text_NoRoomForThisEgg:
 	.string "Oh? You've too many POKéMON.\n"
@@ -132,3 +134,4 @@ LilycoveCity_GTS_F2_Text_StartDownloadMart::
 LilycoveCity_GTS_F2_EventScript_DontConnect::
 	release
 	end
+	

@@ -15,24 +15,39 @@
 #define MINIMUM_CHUNK_SIZE 16
 
 /**
-* Understanding the msg buffer, commands and virtual channels: 
+* Communicating with the wii while the game is running presents a number of challenges. 
+* - Timings are hard
+* - Despite driving connections from the gba the wii is has 'master' in the link
+* - If you try and use the link at full speed the game will lag.  
+* Any message larger than 4 bytes has a change of getting messed up, so all main instructions should be restricted to that size.
+* For any messages larger we need to be able to verify against the returned check bytes and retry. 
+* I've made a system to handle this but it's 'very custom' to the limitations/issues I've encountered so I'm giving a big overview here.
 * 
-* NET_CONN commands are special commands that the pokecom channel will recognise
+* 'virtual channels' are just what I've dubbed 16 byte sections of data in the wii memory. They are sequential in memory so writing past the end of one will go into the next. This is safe.
+* NET_CONN commands are special commands that the pokecom channel will recognise. The first byte defines the command, the other 3 bytes are basically parameters 
 *
-* The pokecom channel allocates an array 8192 bytes of data per gba. 
+* The pokecom channel allocates an array 4096 bytes of data per gba. 
 * This array can be read/written to by the gba and the server
-* Additionally the gba can query the arrays of other gbas pugged into the same wii (but not write to them)
+* In future the gba will be able query the arrays of other gbas pugged into the same wii (but not write to them). This is not implimented yet.
 *
 * Sending the data to the wii, and transmitting that to the server are two separate operations 
 * e.g if I want to send data to the server I need to:
 *   1. send a 0x15YY (NET_CONN_SEND_REQ) with some data to wii to store
-*   2. send a 0x13YY (NET_CONN_TCH1_REQ) so the wii will send it's stored data
+*   2. send a 0x13YY (NET_CONN_TCH1_REQ) so the wii will send it's stored data to the server
 *
 * Virtual Channels: 
-* When sending a 0x1500 data wil be stored at the beginning of the array 0x1501, 0x1502... 0x15YY e.t.c All data writen will be offset by 32*(YY)
-* i.e 0x1500 begins writing at the 0th element of the array, 0x1502 begins writing at the 64th element  
+* When sending a 0x1500 data wil be stored at the beginning of the array 0x1501, 0x1502... 0x15YY e.t.c All data writen will be offset by 16*(YY)
+* i.e 0x1500 begins writing at the 0th element of the array, 0x1502 begins writing at the 32nd element  
 * This lets you write multiple chunks of data to the wii so you can transmit those chunks when ready
-* Transmission commands work the same way with 0x1300 transmitting data from the start and 0x1303 starts transmitting with an offset of 96
+* Transmission commands work the same way with 0x1300 transmitting data from the start and 0x1303 starts transmitting with an offset of 48
+* (TLDR: the last 2 bytes of the command is multiplied by 16 to get the offset it's stored at on the wii)
+* 
+* For the reasons listed bellow it's typically better to do several 0x15 requests, get all the data you need in the wii's buffer then request one big 0x13
+* to send all the data to the server (even if that means sending a lot of empty data to the server) 
+* 1. Transmitting data between the gba and the wii is expensive (very slow but low latency). 
+* 2. Manipulating data on the gba can be hard because of the limited space.
+* 3. Most slow down is caused checksum failures/retries so sending several small msgs to the wii is better than one big one   
+* 4. Transmitting data between the wii and the server is much faster but may have a high latency. 
 */
 
 // Special Commands Recognised by the wii
@@ -47,7 +62,7 @@
 #define NET_CONN_SCH2_REQ 0x1502
 #define NET_CONN_SCH3_REQ 0x1503
 
-#define NET_CONN_TRAN_REQ 0x1300 // Tell wii to send it current data to the server | msg bytes 13 YY XX XX (last 16 bits are unused, YY is the virtual channel)
+#define NET_CONN_TRAN_REQ 0x1300 // Tell wii to send it current data to the server | msg bytes 13 YY XX XX (last 16 bits are size of message to transsmit, YY is the virtual channel)
 #define NET_CONN_TCH1_REQ 0x1301 
 #define NET_CONN_TCH2_REQ 0x1302 
 #define NET_CONN_TCH3_REQ 0x1303 
@@ -90,5 +105,6 @@
 #define NET_CONN_START_BATTLE_FUNC      1
 #define NET_CONN_START_MART_FUNC        2
 #define NET_CONN_START_EGG_FUNC         3
+#define NET_CONN_TRADE_FUNC             4
 
 #endif //GUARD_CONSTANTS_NETWORK_H
