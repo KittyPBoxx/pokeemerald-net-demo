@@ -43,7 +43,7 @@ function handleConnection(conn) {
   
     function onConnData(d) {  
       let dataString = StringHelper.byteArrayToAscii(d);
-      console.log('LANETTE CLIENT: %s', remoteAddress, dataString);  
+      console.log('LANETTE CLIENT: %s', remoteAddress, dataString.substring(0,16));  
       tcpRequestHandler.handleRequest(conn, d);
     }
   

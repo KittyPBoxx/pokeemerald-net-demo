@@ -103,18 +103,16 @@ class TcpRequestHelper {
             console.log("Not yet implimented");
         });
 
-        // p1 select
-        // p1 transmit to server
-        // p2 select 
-        // p2 transmit to server
-        // p1 + p2 confirm and both send a trade receive data request
-        // server matches then exchanges data and returns it
-        // gba checks the first section of data, 
-        // if it is empty -> can't find trade partner
-        // else start trade animation to cover downloading the data
         requestHandler.registerHandler(TRADE_REQUEST, (conn, data, clientList) => {
-            // Store player selected data
-            console.log("Not yet implimented");
+            console.log("Trade request");
+            // 100 bytes is the size of a mon
+            // The server was sent 16 bytes + the mon. By now it has trimmed 3 bytes off the start
+            let dataArray = new Uint8Array(100 + 16);
+            dataArray.set(new Uint8Array(StringHelper.convertMessageToHex(conn.playerName)), 0);
+            dataArray.set(data.slice(13, data.length), 16);
+            console.log("ARRAY IS: %s", dataArray);
+            let tradeMsg = new Message(0xF0, 100 + 16, dataArray);
+            sendMessage(conn, tradeMsg);
         });
 
         return requestHandler;

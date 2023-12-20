@@ -187,7 +187,6 @@ static void Task_NetworkTaskLoop(u8 taskId)
                 NetConnResetSerial();
 
             SetSuppressLinkErrorMessage(TRUE);
-            xfer16(NET_CONN_BCLR_REQ, 0, taskId);
             sSendRecvMgr.state = NET_CONN_STATE_PROCESS;
             DebugPrintfLevel(MGBA_LOG_DEBUG, "--- INIT");
             break;
@@ -288,9 +287,9 @@ static void DoTransferDataBlock(u8 taskId)
 
     DebugPrintfLevel(MGBA_LOG_DEBUG, "Check bytes Before %x", checkBytes);
 
-    xfer16(sSendRecvMgr.cmd, (u16) sSendRecvMgr.length, taskId);
+    xfer16(sSendRecvMgr.cmd, sSendRecvMgr.length, taskId);
     checkBytes ^= sSendRecvMgr.cmd;
-    checkBytes ^= (u16) sSendRecvMgr.length;
+    checkBytes ^= sSendRecvMgr.length;
 
     DebugPrintfLevel(MGBA_LOG_DEBUG, "Check bytes Post CMD %x", checkBytes);
 
@@ -972,11 +971,12 @@ static void Task_EndGiftEggConnection(u8 taskId)
 *   =====================================================================
 */
 enum {
-    TRADE_SEND_REQUEST = 0,
+    TRADE_CLEAR_LAST_PARTNER = 0,
+    TRADE_SEND_REQUEST,
     TRADE_APPEND_MON_DATA, 
     TRADE_TRANSMIT_REQUEST, 
     TRADE_WAIT_LONG_FOR_SERVER, 
-    TRADE_RECEIVE_SMALL_DATA, 
+    TRADE_RECEIVE_NAME_DATA, 
     TRADE_VERIFY_PARTNER_FOUND,
     TRADE_WAIT_SHORT_FOR_SERVER, 
     TRADE_RECEIVE_FULL_DATA, 
@@ -986,11 +986,11 @@ enum {
 static void SetupForTradeTask()
 {
     sSendRecvMgr.allowCancel       = TRUE;
-    sSendRecvMgr.retriesLeft       = MAX_CONNECTION_RETRIES;
+    sSendRecvMgr.retriesLeft       = MAX_CONNECTION_RETRIES + 20;
     sSendRecvMgr.onFinish          = Task_EndTradeConnection;
     sSendRecvMgr.onCancel          = Task_TradeCancel;
     sSendRecvMgr.onProcess         = Task_TradeProcess;
-    sSendRecvMgr.nextProcessStep   = TRADE_SEND_REQUEST;
+    sSendRecvMgr.nextProcessStep   = TRADE_CLEAR_LAST_PARTNER;
     sSendRecvMgr.disableChecks     = FALSE;
     sSendRecvMgr.repeatedStepCount = 0;
     gSpecialVar_0x8003 = 0;
@@ -1005,6 +1005,14 @@ static void Task_TradeProcess(u8 taskId)
 {
     switch (sSendRecvMgr.nextProcessStep)
     {
+        case TRADE_CLEAR_LAST_PARTNER:
+            DebugPrintfLevel(MGBA_LOG_DEBUG, "--- TRADE_CLEAR_LAST_PARTNER");
+            // We need to clear the wii data here so we don't pull stale trade data
+            // Normally we'd use the NET_CONN_BCLR_REQ command but I'm currently getting weird issues
+            gStringVar3[0] = 0; gStringVar3[1] = 0; gStringVar3[2] = 0; gStringVar3[3] = 0;
+            configureSendRecvMgr(0x15F0, (vu32 *) &gStringVar3[0], 4, NET_CONN_STATE_SEND, TRADE_SEND_REQUEST);
+            break;
+
         case TRADE_SEND_REQUEST:
             DebugPrintfLevel(MGBA_LOG_DEBUG, "--- TRADE_SEND_REQUEST");
             gStringVar3[0] = 'T'; gStringVar3[1] = 'R'; gStringVar3[2] = '_'; gStringVar3[3] = '0';
@@ -1014,7 +1022,7 @@ static void Task_TradeProcess(u8 taskId)
         case TRADE_APPEND_MON_DATA:
             DebugPrintfLevel(MGBA_LOG_DEBUG, "--- TRADE_APPEND_MON_DATA");
             sSendRecvMgr.retryPoint = TRADE_APPEND_MON_DATA;
-            configureSendRecvMgr(NET_CONN_SCH1_REQ, (vu32 *) &gPlayerParty[0], sizeof(struct Pokemon), NET_CONN_STATE_SEND, TRADE_TRANSMIT_REQUEST);
+            configureSendRecvMgrChunked(NET_CONN_SCH1_REQ, (vu32 *) &gPlayerParty[gSpecialVar_0x8005], sizeof(struct Pokemon), NET_CONN_STATE_SEND, TRADE_TRANSMIT_REQUEST, MINIMUM_CHUNK_SIZE);
             break;
 
         case TRADE_TRANSMIT_REQUEST:
@@ -1027,20 +1035,19 @@ static void Task_TradeProcess(u8 taskId)
 
         case TRADE_WAIT_LONG_FOR_SERVER:
             if (DoWaitTextAnimation(80, sWaitingMessage) > 0)
-                sSendRecvMgr.nextProcessStep = TRADE_RECEIVE_SMALL_DATA;
+                sSendRecvMgr.nextProcessStep = TRADE_RECEIVE_NAME_DATA;
             break;
 
-        case TRADE_RECEIVE_SMALL_DATA:
+        case TRADE_RECEIVE_NAME_DATA:
             // We don't know when the other player connected to us (or if there is a connection at all). 
             // So wait. Pull a little bit of data. If we got some data wait again. Then pull the whole thing  
-            DebugPrintfLevel(MGBA_LOG_DEBUG, "--- TRADE_RECEIVE_SMALL_DATA");
+            DebugPrintfLevel(MGBA_LOG_DEBUG, "--- TRADE_RECEIVE_NAME_DATA");
             sSendRecvMgr.disableChecks = FALSE;
             if (sSendRecvMgr.repeatedStepCount == 0)
             {
-                CpuFill32(0, &gEnemyParty, sizeof(gEnemyParty));     
-                sSendRecvMgr.retryPoint = TRADE_RECEIVE_SMALL_DATA;
+                sSendRecvMgr.retryPoint = TRADE_RECEIVE_NAME_DATA;
             }
-            configureSendRecvMgrChunked(NET_CONN_RCHF0_REQ, (vu32 *) &gEnemyParty[0], 16, NET_CONN_STATE_RECEIVE, TRADE_VERIFY_PARTNER_FOUND, MINIMUM_CHUNK_SIZE);
+            configureSendRecvMgrChunked(NET_CONN_RCHF0_REQ, (vu32 *) &gStringVar3[0], 16, NET_CONN_STATE_RECEIVE, TRADE_VERIFY_PARTNER_FOUND, MINIMUM_CHUNK_SIZE);
             break;
 
         case TRADE_VERIFY_PARTNER_FOUND:
@@ -1048,13 +1055,15 @@ static void Task_TradeProcess(u8 taskId)
             u8 i;
             gSpecialVar_0x8003 = 1; // No partner found
             sSendRecvMgr.nextProcessStep = TRADE_FINISH;
-            for (i = 0; i < 16; i++)
+            for (i = 0; i < 4; i++)
             {
-                if ((*(char*) (&gEnemyParty[0] + i)) != 0)
+                if (gStringVar3[i] != 0)
                 {
                     gSpecialVar_0x8003 = 0; // Back to error state
                     sSendRecvMgr.nextProcessStep = TRADE_WAIT_SHORT_FOR_SERVER;
                 }
+
+                DebugPrintfLevel(MGBA_LOG_DEBUG, "--- stringData %x", gStringVar3[i]);
             }
             break;
         }
@@ -1071,15 +1080,33 @@ static void Task_TradeProcess(u8 taskId)
                 CpuFill32(0, &gEnemyParty, sizeof(gEnemyParty));     
                 sSendRecvMgr.retryPoint = TRADE_RECEIVE_FULL_DATA;
             }
-            configureSendRecvMgrChunked(NET_CONN_RCHF0_REQ, (vu32 *) &gEnemyParty[0], sizeof(struct Pokemon), NET_CONN_STATE_RECEIVE, TRADE_FINISH, MINIMUM_CHUNK_SIZE);
+            configureSendRecvMgrChunked(NET_CONN_RCHF1_REQ, (vu32 *) &gEnemyParty[0], sizeof(struct Pokemon), NET_CONN_STATE_RECEIVE, TRADE_FINISH, MINIMUM_CHUNK_SIZE);
             break;
 
         case TRADE_FINISH:
         default:
+        {
+            u16 species = GetMonData(&gEnemyParty[0], MON_DATA_SPECIES);
             DebugPrintfLevel(MGBA_LOG_DEBUG, "--- TRADE_FINISH");
+
+            if (gSpecialVar_0x8003 != 1)
+            {
+                if (!(gEnemyParty[0].box.isBadEgg) && !(species > SPECIES_EGG))
+                {
+                    DebugPrintfLevel(MGBA_LOG_DEBUG, "--- We got back valid trade data");
+                    CopyMon(&gPlayerParty[gSpecialVar_0x8005], &gEnemyParty[0], sizeof(struct Pokemon));
+                    gSpecialVar_0x8003 = 2;
+                    gStringVar3[PLAYER_NAME_LENGTH + 1] = 0xFF;
+                    gSpecialVar_0x8004 = 100; // This makes the in game trade use special values for name
+                }
+                else 
+                {
+                    DebugPrintfLevel(MGBA_LOG_DEBUG, "--- We got back invalid trade data");
+                }
+            }
             sSendRecvMgr.state = NET_CONN_STATE_DONE;
-            // TODO: stuff with the data
             break;
+        }
     }
 
     gTasks[taskId].func = Task_NetworkTaskLoop;

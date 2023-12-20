@@ -184,10 +184,11 @@ static void *seriald (SerialConnector *connector)
 					SL_reset(connector->gcport);
                     connector->internalState = SERIAL_STATE_SENDING;
                 }
-				else if ((u16) (pkt[1] | pkt[0] << 8) == NET_CONN_BCLR_REQ)
+				else if ((u16) (pkt[0] | pkt[1] << 8) == NET_CONN_BCLR_REQ)
 				{
 					memset(connector->receivedMsgBuffer,0,MAX_MSG_SIZE);
-					usleep(1000);
+					memset(tcpClient->connector.fetchedMsgBuffer,0,NET_MSG_SIZE);
+					usleep(50000);
 				}
 				else if (NET_CONN_PINF_REQ == (u16) (pkt[0] | pkt[1] << 8))
 				{
@@ -413,10 +414,7 @@ static void *seriald (SerialConnector *connector)
 
 					}
 					
-					if (connector->receivedMsgBuffer[msgBytesOffset] != 0)
-					{
-						commResult = SL_send(connector->gcport, (u32) (NET_CONN_CHCK_RES << 16) | (msgCheckBytes & 0xFFFF));
-					}
+					commResult = SL_send(connector->gcport, (u32) (NET_CONN_CHCK_RES << 16) | (msgCheckBytes & 0xFFFF));
 
 					usleep(500);
 

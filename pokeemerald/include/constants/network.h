@@ -54,8 +54,9 @@
 
 #define NET_CONN_LIFN_REQ 0x2005 // Return information about this devices network connection 
 
-#define NET_CONN_RECV_REQ 0x2500 // Tell wii to send us data from the buffer for this devices port | msg bytes 25 YY XX XX (X is the 16bit size of msg to receive, YY is the virtual channel)
+#define NET_CONN_RECV_REQ 0x2500 // Tell wii to send us data from the buffer for this devices port | msg bytes 25 YY XX XX (X is the 16bit size of msg to receive, YY is the virtual channel)  
 #define NET_CONN_RCHF0_REQ 0x25F0  
+#define NET_CONN_RCHF1_REQ 0x25F1
 
 #define NET_CONN_SEND_REQ 0x1500 // Tell wii you want to send it data              | msg bytes 15 YY XX XX (X is the 16bit size of msg to send, YY is the virtual channel)
 #define NET_CONN_SCH1_REQ 0x1501
@@ -68,7 +69,9 @@
 #define NET_CONN_TCH3_REQ 0x1303 
 #define NET_CONN_TCHF0_REQ 0x13F0 
 
-#define NET_CONN_BCLR_REQ 0x1200 // Tell wii to clear the whole message buffer     | msg bytes 12 00 XX XX (last 16 bits are unused)
+// DO NOT USE THIS! There's a memory allocation issue in the wii channel so you start gettting weird resutls back 
+// #define NET_CONN_BCLR_REQ 0x1200 // Tell wii to clear the whole message buffer     | msg bytes 12 00 XX XX (last 16 bits are unused)
+
 #define NET_CONN_PINF_REQ 0x1201 // Tell wii to use current data as player info    | msg bytes 12 01 XX XX (last 16 bits are unused)
 #define NET_CONN_CINF_REQ 0x1202 // Tell wii to use current data as server info    | msg bytes 12 02 XX XX (last 16 bits are unused)
 

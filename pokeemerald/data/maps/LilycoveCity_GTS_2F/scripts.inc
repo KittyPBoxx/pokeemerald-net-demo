@@ -2,11 +2,25 @@ LilycoveCity_GTS_2F_MapScripts::
 	.byte 0
 
 LilycoveCity_GTS_F2_EventScript_UnionLady::
-	msgbox LilycoveCity_GTS_F2_Text_NotAvailable, MSGBOX_NPC
+	lock
+	faceplayer
+	msgbox LilycoveCity_GTS_F2_Text_DoYouWantToRandomTrade, MSGBOX_YESNO
+	goto_if_eq VAR_RESULT, NO, LilycoveCity_GTS_F2_EventScript_DeclineTrade
+	special ChoosePartyMon
+	waitstate
+	copyvar VAR_0x8005, VAR_0x8004
+	goto_if_eq VAR_0x8005, PARTY_NOTHING_CHOSEN, LilycoveCity_GTS_F2_EventScript_DeclineTrade
+	specialvar VAR_RESULT, ScriptGetPartyMonSpecies
+	copyvar VAR_0x8009, VAR_RESULT
+	bufferspeciesname STR_VAR_1, VAR_0x8009
+	message LilycoveCity_GTS_F2_Text_PleaseConfirmTrade
+	waitmessage
+	multichoicedefault 20, 8, MULTI_YESNO, 1, FALSE
+	switch VAR_RESULT
+	case 1, LilycoveCity_GTS_F2_EventScript_DeclineTrade
+	case 0, LilycoveCity_GTS_F2_EventScript_Trade
+	case MULTI_B_PRESSED, LilycoveCity_GTS_F2_EventScript_DeclineTrade
 	end
-
-LilycoveCity_GTS_F2_Text_NotAvailable::
-	.string "This feature is not yet available.$"
 
 LilycoveCity_GTS_F2_EventScript_Trainer::
 	lock
@@ -45,6 +59,18 @@ LilycoveCity_GTS_F2_EventScript_MartClerk::
 	case 1, LilycoveCity_GTS_F2_EventScript_DontConnect
 	case 0, LilycoveCity_GTS_F2_EventScript_NetShop
 	case MULTI_B_PRESSED, LilycoveCity_GTS_F2_EventScript_DontConnect
+	end
+
+LilycoveCity_GTS_F2_EventScript_Trade::
+	message LilycoveCity_GTS_F2_Text_TradePleaseWait
+	setvar VAR_0x8004, NET_CONN_TRADE_FUNC
+	special CallNetworkFunction
+	waitstate
+	goto_if_eq VAR_0x8003, 0, LilycoveCity_GTS_F2_EventScript_ConnectionEnded
+	goto_if_eq VAR_0x8003, 1, LilycoveCity_GTS_F2_EventScript_NoPartner
+	special DoInGameTradeScene
+	waitstate
+	release
 	end
 
 LilycoveCity_GTS_F2_EventScript_NetShop::
@@ -93,6 +119,15 @@ LilycoveCity_GTS_F2_EventScript_NetEgg_No_Special_Move::
 	releaseall
 	end
 
+LilycoveCity_GTS_F2_EventScript_DeclineTrade::
+	closemessage
+	releaseall
+	end
+
+LilycoveCity_GTS_F2_EventScript_NoPartner::
+	msgbox LilycoveCity_GTS_F2_Text_NoPartner, MSGBOX_NPC
+	end
+
 LilycoveCity_GTS_F2_EventScript_ConnectionEnded::
 	msgbox LilycoveCity_GTS_F2_Text_ConnectionEnded, MSGBOX_NPC
 	end
@@ -108,6 +143,23 @@ LilycoveCity_GTS_F2_EventScript_NoRoomForEgg::
 	msgbox LilycoveCity_GTS_F2_Text_NoRoomForThisEgg, MSGBOX_DEFAULT
 	release
 	end
+
+LilycoveCity_GTS_F2_Text_NotAvailable::
+	.string "This feature is not yet available.$"
+
+LilycoveCity_GTS_F2_Text_TradePleaseWait::
+	.string "Preparing trade...$"
+
+LilycoveCity_GTS_F2_Text_DoYouWantToRandomTrade::
+	.string "Do you want to randomly trade with\n"
+	.string "another player on this server?$"
+
+LilycoveCity_GTS_F2_Text_PleaseConfirmTrade::
+	.string "So you want to trade {STR_VAR_1}?\n"
+	.string "YOU WON'T BE ABLE TO CANCEL THIS!$"
+
+LilycoveCity_GTS_F2_Text_NoPartner::
+	.string "No trade partner found.$"
 
 LilycoveCity_GTS_F2_Text_TakeGoodCareOfEgg::
 	.string "Take good care of the EGG.$"
@@ -134,4 +186,3 @@ LilycoveCity_GTS_F2_Text_StartDownloadMart::
 LilycoveCity_GTS_F2_EventScript_DontConnect::
 	release
 	end
-	

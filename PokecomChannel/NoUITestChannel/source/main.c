@@ -627,10 +627,11 @@ static void *seriald (SerialConnector *connector)
 					printf("Sending message \n");
                     connector->internalState = SERIAL_STATE_SENDING;
                 }
-				else if ((u16) (pkt[1] | pkt[0] << 8) == NET_CONN_BCLR_REQ)
+				else if ((u16) (pkt[0] | pkt[1] << 8) == NET_CONN_BCLR_REQ)
 				{
 					printf("Resetting MSG Buffer\n");
 					memset(connector->receivedMsgBuffer,0,MAX_MSG_SIZE);
+					memset(tcpConnector.fetchedMsgBuffer,0,1024);
 					usleep(1000);
 				}
 				else if (NET_CONN_PINF_REQ == (u16) (pkt[0] | pkt[1] << 8))
@@ -865,8 +866,8 @@ static void *seriald (SerialConnector *connector)
 
 					}
 					
-					if (connector->receivedMsgBuffer[msgBytesOffset] != 0)
-					{
+					// if (connector->receivedMsgBuffer[msgBytesOffset] != 0)
+					// {
 						commResult = SL_send(connector->gcport, (u32) (NET_CONN_CHCK_RES << 16) | (msgCheckBytes & 0xFFFF));
 
 						printf("MSG CHECK: %x\n", msgCheckBytes);
@@ -875,7 +876,7 @@ static void *seriald (SerialConnector *connector)
 						connector->receivedMsgBuffer[msgBytesOffset + 4] , connector->receivedMsgBuffer[msgBytesOffset + 5] , connector->receivedMsgBuffer[msgBytesOffset + 6] , connector->receivedMsgBuffer[msgBytesOffset + 7],
 						connector->receivedMsgBuffer[msgBytesOffset + 8] , connector->receivedMsgBuffer[msgBytesOffset + 9] , connector->receivedMsgBuffer[msgBytesOffset + 10], connector->receivedMsgBuffer[msgBytesOffset + 11],
 						connector->receivedMsgBuffer[msgBytesOffset + 12], connector->receivedMsgBuffer[msgBytesOffset + 13], connector->receivedMsgBuffer[msgBytesOffset + 14], connector->receivedMsgBuffer[msgBytesOffset + 15]);
-					}
+					// }
 
 					usleep(500);
 

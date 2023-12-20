@@ -114,7 +114,7 @@ Ask the wii to send data from its array to the server:
 >
 > Example 0x13010010 = please send all the data from index 16 (01 * 16) to index 32 (16 + 0x10) to the server   
 
-⚠️ TRAN and LIFN currently have broken validation so you need to `disableChecks` when using these commands and enable them again after.
+⚠️ TRAN (send from wii to server), BCLR (reset the wii data) and LIFN (return wii network info) currently have broken validation so you need to `disableChecks` when using these commands and enable them again after.
 
 For more info on why its setup like this you can see the docs in `network.h`
 
@@ -129,7 +129,7 @@ void configureSendRecvMgrChunked(u16 cmd, vu32 * dataStart, u16 length, u8 state
 
 These methods both do basically the same thing. The difference being that `configureSendRecvMgr` validated the data once at the end whereas `configureSendRecvMgrChunked` validates sections of the data as it's sent. This means `configureSendRecvMgrChunked` has a larger overhead (as it needs to send a bunch more validation messages) but unlike `configureSendRecvMgr` if a transmission fails it won't have to start from scratch. 
 
-Basically if you are sending less than 16 bytes use `configureSendRecvMgr` if you are sending more then use `configureSendRecvMgrChunked`. 
+Basically if you are sending less than 16 bytes use `configureSendRecvMgr` if you are sending more then use `configureSendRecvMgrChunked`. The minimum and recommended chunk size is 16 because the transfer commands don't allow writing data at a more granular level.
 
 Let's take a look at a simplified example of the ProcessFunction steps to download a custom mart:
 
