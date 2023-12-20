@@ -60,6 +60,8 @@ There are 3 main components to this project:
 - A homebrew Wii channel allowing up-to 4 GBA's to connect to the server (per wii)
 - A NodeJS Server, with TCP Server for game connections and a Webserver for providing a UI for configuring the server
 
+You can download a zip of the latest releas build here https://github.com/KittyPBoxx/pokeemerald-net-demo/releases/tag/v0.1.0
+
 ## Quick Start *(I'm working on better instructions)*
 
 ### 1 - Get all the resources
