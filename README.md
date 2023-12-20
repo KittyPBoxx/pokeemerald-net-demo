@@ -27,6 +27,7 @@ Several features are included to showcase the network conectivity. These crrentl
 
 - Returning a welcome message to display in game when connecting to the server
 - Downloadable EReader Style Battles. Through the Web UI, choose 3 pokemon, nicknames, held items, moves and levels.
+- Random Trades. Randomly trade with another person connected to the server.
 - Downloadable Mart. Through the Web UI, pick up to 6 items for the mart to sell.
 - Downloadable Gift Egg. Through Web UI choose the pokemon and allow it to have a special move. Users can only download each egg once. 
 

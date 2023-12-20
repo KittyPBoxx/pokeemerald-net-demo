@@ -1094,7 +1094,6 @@ static void Task_TradeProcess(u8 taskId)
                 if (!(gEnemyParty[0].box.isBadEgg) && !(species > SPECIES_EGG))
                 {
                     DebugPrintfLevel(MGBA_LOG_DEBUG, "--- We got back valid trade data");
-                    CopyMon(&gPlayerParty[gSpecialVar_0x8005], &gEnemyParty[0], sizeof(struct Pokemon));
                     gSpecialVar_0x8003 = 2;
                     gStringVar3[PLAYER_NAME_LENGTH + 1] = 0xFF;
                     gSpecialVar_0x8004 = 100; // This makes the in game trade use special values for name
