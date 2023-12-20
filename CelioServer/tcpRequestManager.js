@@ -21,6 +21,10 @@ const RECEIVE_MAIL_REQUEST       = StringHelper.asciiToByteArray("RM"); // Not y
 // Wonder Trade
 const TRADE_REQUEST              = StringHelper.asciiToByteArray("TR");
 
+const TRADING_STATE_NONE     = 0;
+const TRADING_STATE_OFFERING = 2;
+const TRADING_STATE_ACCEPTED = 3;
+
 class TcpRequestHelper {
 
     static createRequestHandler(trainerHelper, marketHelper, giftEggHelper)
@@ -56,7 +60,8 @@ class TcpRequestHelper {
                                                            "gender"       : conn.gender,
                                                            "game"         : conn.game, 
                                                            "lastSentMail" : conn.lastSentMail,
-                                                           "unreadMail"   : conn.unreadMail});
+                                                           "unreadMail"   : conn.unreadMail,
+                                                           "tradeState"   : TRADING_STATE_NONE});
           
             console.log('GAME: %s | PLAYER: %s | GENDER: %s | TRAINER_ID %s', conn.game, conn.playerName, conn.gender, conn.trainerId);
         });
@@ -110,9 +115,49 @@ class TcpRequestHelper {
             let dataArray = new Uint8Array(100 + 16);
             dataArray.set(new Uint8Array(StringHelper.convertMessageToHex(conn.playerName)), 0);
             dataArray.set(data.slice(13, data.length), 16);
-            console.log("ARRAY IS: %s", dataArray);
-            let tradeMsg = new Message(0xF0, 100 + 16, dataArray);
-            sendMessage(conn, tradeMsg);
+
+            let candidateTrade = [...clientList.values()].filter(client => client.tradeState == TRADING_STATE_OFFERING)[0];
+            if (candidateTrade) {
+                // Someone else already offering
+                if (clientList.get(candidateTrade.id))
+                    clientList.get(candidateTrade.id).tradeState = TRADING_STATE_ACCEPTED;
+
+                // Switch our data and return    
+                candidateTrade.tradeResponse = new Message(0xF0, 100 + 16, dataArray);
+                sendMessage(conn, candidateTrade.tradeOffer);
+
+                if (clientList.get(candidateTrade.id))
+                    clientList.get(candidateTrade.id).tradeState = TRADING_STATE_NONE;
+
+            } else {
+                // We are the first, offer ourselves
+                clientList.get(conn.trainerId).tradeOffer = new Message(0xF0, 100 + 16, dataArray);
+                clientList.get(conn.trainerId).tradeResponse = new Message(0xF0, 100 + 16, new Uint8Array(100 + 16));
+                clientList.get(conn.trainerId).tradeState = TRADING_STATE_OFFERING;
+                new Promise(resolve => setTimeout(resolve, 3000)).then(() => {
+
+                    if (clientList.get(conn.trainerId).tradeState == TRADING_STATE_OFFERING) {
+
+                        // The offer was not accepted. Wait another 100 ms just incase
+                        clientList.get(conn.trainerId).tradeState = TRADING_STATE_NONE;
+                        new Promise(resolve => setTimeout(resolve, 100)).then(() => {
+
+                            sendMessage(conn, clientList.get(conn.trainerId).tradeResponse);
+
+                        });
+
+                    } else {
+
+                        // Offer was accepted we can return right away
+                        sendMessage(conn, clientList.get(conn.trainerId).tradeResponse);
+
+                    }
+
+                });
+
+            }
+
+            console.log("Mon from %s: %s", conn.trainerId, dataArray);
         });
 
         return requestHandler;
