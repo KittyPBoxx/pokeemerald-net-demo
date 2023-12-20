@@ -4,7 +4,21 @@
 
 # Emerald Net Demo
 
-This project aims to add a network connection into Pokemon Emerald, using only official hardware.
+This project aims to add a network connection into Pokemon Emerald, using only official hardware. With some demos and a web server to test things.
+
+![](examples.png)
+
+## Current Demos
+
+Several features are included to showcase the network conectivity. These crrently include:
+
+- Returning a welcome message to display in game when connecting to the server
+- Downloadable EReader Style Battles. Through the Web UI, choose 3 pokemon, nicknames, held items, moves and levels.
+- Random Trades. Randomly trade with another person connected to the server.
+- Downloadable Mart. Through the Web UI, pick up to 6 items for the mart to sell.
+- Downloadable Gift Egg. Through Web UI choose the pokemon and allow it to have a special move. Users can only download each egg once. 
+
+## Network Diagram
 
 ```mermaid
 sequenceDiagram
@@ -21,15 +35,6 @@ sequenceDiagram
     Note over 📺 WII,🎮 GBA: (JOYBUS)
 ```
 
-## Current Demos
-
-Several features are included to showcase the network conectivity. These crrently include:
-
-- Returning a welcome message to display in game when connecting to the server
-- Downloadable EReader Style Battles. Through the Web UI, choose 3 pokemon, nicknames, held items, moves and levels.
-- Random Trades. Randomly trade with another person connected to the server.
-- Downloadable Mart. Through the Web UI, pick up to 6 items for the mart to sell.
-- Downloadable Gift Egg. Through Web UI choose the pokemon and allow it to have a special move. Users can only download each egg once. 
 
 ## Requirements
 
@@ -55,16 +60,61 @@ There are 3 main components to this project:
 - A homebrew Wii channel allowing up-to 4 GBA's to connect to the server (per wii)
 - A NodeJS Server, with TCP Server for game connections and a Webserver for providing a UI for configuring the server
 
-## Instructions *(Very breif instructions for testing, I'm working on the Dev and User docs)*
+## Quick Start *(I'm working on better instructions)*
 
-1. Build the pokeemerald project
-2. In Dolphin >= 5, go to controllers and select integrated GBA controller (or TCP controller if you are using external mgba) 
-3. Make sure the following config is set in dolphin:
-  * settings->wii | aspect ratio is set to 4:3
-  * settings->gamecube | a gba bios is loaded  
-  * settings->gamecube | the pokeemerald rom is loaded in same port as the integrated GBA controller you are using
-  * If using an exsiting save the name is updated. i.e if your rom is pokeemerald.gba and you are in port 1 the save would be called 'pokeemerald-1.sav'
-3. Run the Pokecom channel .dol or install the channel WAD (with load wii system menu, then install WAD)
-4. Run Celio Server application with `npm run start`, and load the web UI by going to localhost:8081 in a browser
-5. Restart the GBA so that the Pokecom channel will detect it. The network config is stored in the game but can be overriden on the wii. By default it will connect at localhost:9000 (set in net_conn.c) so make sure dolphin and the server are running on the same machine
-6. Start the game and get to Oldale. There you can talk to Norman who will take you to Lilycove where you can visit the network center a new building. Inside talk to the computer terminal on the left to get connected, then enter the back room to try the network demos  
+### 1 - Get all the resources
+
+See the 'requirements' section for all the software/hardware you can use. You also need the release zip which contains three programs.
+
+- Celios Server, (for windows/mac/linux) that you can run as an executable
+- The pokemon emerald xdelta patch that can be applied to your copy of pokemon emerald
+- Pokecom Channel, both the WAD and .dol are included. So you can install the WAD as a channel or just run the .dol (whichever you prefer)
+
+On top of these you will need
+
+- Your Pokemon Emerald (U) backup rom
+- A GBA bios.bin file
+
+### 2 - Patching Emerald
+
+- Get your copy of Emerald (U). (md5sum 605b89b67018abcea91e693a4dd25be3) 
+- Get the netdemo.xdelta from the release zip
+- Use this site to patch your rom. https://www.marcrobledo.com/RomPatcher.js/
+
+### 3 - Configure Dolphin 
+
+  - Get Dolphin >= 5, (the android release will not work as it dosn't support gba connections)
+
+Configure the following settings
+
+  - Open Controllers and select integrated GBA controller
+  - Settings->Wii | aspect ratio should be 4:3
+  - Settings->Gamecube | Load the gameboy bios.bin  
+  - Settings->Gamecube | the pokeemerald rom is loaded in same port as the integrated GBA controller you are using
+  - If using an exsiting save the name is updated. i.e if your rom is pokeemerald.gba and you are in port 1 the save would be called 'pokeemerald-1.sav'
+
+The easiest way to run the wii channel is just to drag and drop the 'pokecom-channel.dol' file into dolphin 
+
+### 4 - Run the server
+
+In windows double click on celioserver-win.exe or run it from the command line.
+
+Once it is running you can go to the web ui by going to `localhost:8081` in your web browser
+
+The game server runs at localhost:9000 so dolphin should automatically be able to connect if they are running on the same PC
+
+### 5 - Play the game
+  
+* When the wii channel launches the integrated mgba should launch at the same time
+* If the wii channel does not detect the game automatically, left click the mgba window, reset the game, and it should be picked up
+* The player in the wii channel will show as "Waiting" untill you talk to the terminal at the Lilycove Network Center
+* If you are starting a new save, Norman will be waiting in Oldale to take you to Lilycove. Once there head to the North-Eastern building and speak to the terminal.
+
+## Dev Guide *(I'm working on docs)*
+
+Each readme had some documentation. The pokeemerald project has the most detail.
+
+- Build pokeemerald as you normally would.
+- run the dev server with `npm run start`, build the executables with `npm run build`
+- You can use mgba over tcp with dolphin for debugging the gba (it's already printing lots of logs)
+- On the wii channel you can press `minus` for some debug info. There's also a slightly different "no UI" channel that prints info to the screen
