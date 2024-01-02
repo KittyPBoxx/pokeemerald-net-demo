@@ -260,7 +260,7 @@ static void NetConnResetSerial(void)
 
 static void DoTransferDataBlock(u8 taskId)
 {
-    u16 i = 0;
+    u32 i = 0;
     u8 * dataStart;
     u16 checkBytes = 0xFFFF;
     u8 transBuff[4];
@@ -319,7 +319,7 @@ static void DoTransferDataBlock(u8 taskId)
 
 static void DoReceiveDataBlock(u8 taskId)
 {
-    u16 i = 0;
+    u32 i = 0;
     u8 * dataStart;
     u16 checkBytes = 0xFFFF;
     u8 transBuff[4];
@@ -408,7 +408,7 @@ u32 recv32(u8 taskId)
 
 void waitForTransmissionFinish(u8 taskId, u16 readOrWriteFlag)
 {
-    u16 i = 0;
+    u32 i = 0;
 
     for (i = 0; (JOY_CNT&readOrWriteFlag) == 0; i++)
     {
@@ -649,8 +649,8 @@ static void Task_DownloadBattleProcess(u8 taskId)
         case DOWNLOAD_BATTLE_FINISH: // Process the data (create the ereader data from what is now stored in gStringVar3)
         default:
         {
-            u8 i;
-            u8 offset = 0;
+            u32 i;
+            u32 offset = 0;
 
             FillEReaderTrainerWithPlayerData();
             StringFill(gSaveBlock2Ptr->frontier.ereaderTrainer.name, CHAR_SPACER, PLAYER_NAME_LENGTH);
@@ -784,7 +784,7 @@ static void Task_OnlineMartProcess(u8 taskId)
         case DOWNLOAD_MART_FINISH:
         default:
         {
-            u8 i;
+            u32 i;
             gSpecialVar_0x8003 = 1;
             for (i = 0; i < DOWNLOAD_MART_SIZE; i++)
             {
@@ -988,7 +988,7 @@ static void Task_TradeProcess(u8 taskId)
 
         case TRADE_VERIFY_PARTNER_FOUND:
         {
-            u8 i;
+            u32 i;
             gSpecialVar_0x8003 = 1; // No partner found
             sSendRecvMgr.nextProcessStep = TRADE_FINISH;
             for (i = 0; i < 4; i++)
