@@ -188,22 +188,17 @@ static void Task_NetworkTaskLoop(u8 taskId)
 
             SetSuppressLinkErrorMessage(TRUE);
             sSendRecvMgr.state = NET_CONN_STATE_PROCESS;
-            DebugPrintfLevel(MGBA_LOG_DEBUG, "--- INIT");
             break;
         case NET_CONN_STATE_SEND:
-            DebugPrintfLevel(MGBA_LOG_DEBUG, "--- SEND");
             DoTransferDataBlock(taskId);
             break;
         case NET_CONN_STATE_RECEIVE:
-            DebugPrintfLevel(MGBA_LOG_DEBUG, "--- RECEIVE");
             DoReceiveDataBlock(taskId);
             break;
         case NET_CONN_STATE_PROCESS: 
-            DebugPrintfLevel(MGBA_LOG_DEBUG, "--- PROCESS");
             gTasks[taskId].func = sSendRecvMgr.onProcess;
             break;
         case NET_CONN_STATE_ERROR:
-            DebugPrintfLevel(MGBA_LOG_DEBUG, "--- ERROR");
             JOY_TRANS = 0;
             if (--sSendRecvMgr.retriesLeft < 0)
             {
@@ -216,11 +211,9 @@ static void Task_NetworkTaskLoop(u8 taskId)
                 if (sSendRecvMgr.repeatedStepCount > 0) sSendRecvMgr.repeatedStepCount--;
                 NetConnResetSerial();
             }
-            DebugPrintfLevel(MGBA_LOG_DEBUG, "Looping with retries left %d",  sSendRecvMgr.retriesLeft);
             break;
         case NET_CONN_STATE_DONE:
         default:
-            DebugPrintfLevel(MGBA_LOG_DEBUG, "--- DONE");
             gTasks[taskId].func = sSendRecvMgr.onFinish;
             break;
     }
@@ -285,13 +278,9 @@ static void DoTransferDataBlock(u8 taskId)
 
     }
 
-    DebugPrintfLevel(MGBA_LOG_DEBUG, "Check bytes Before %x", checkBytes);
-
     xfer16(sSendRecvMgr.cmd, sSendRecvMgr.length, taskId);
     checkBytes ^= sSendRecvMgr.cmd;
     checkBytes ^= sSendRecvMgr.length;
-
-    DebugPrintfLevel(MGBA_LOG_DEBUG, "Check bytes Post CMD %x", checkBytes);
 
     if (sSendRecvMgr.state == NET_CONN_STATE_ERROR)
         return;
@@ -313,12 +302,10 @@ static void DoTransferDataBlock(u8 taskId)
         checkBytes ^= (u16) (transBuff[0] + (transBuff[1] << 8));
         checkBytes ^= (u16) (transBuff[2] + (transBuff[3] << 8));
 
-        DebugPrintfLevel(MGBA_LOG_DEBUG, "Check bytes %d Post Send %x", i, checkBytes);
-
     }
     
     resBuff = recv32(taskId);
-    DebugPrintfLevel(MGBA_LOG_DEBUG, "Response from wii %x", resBuff);
+
     if (sSendRecvMgr.disableChecks || (resBuff ^ (u32) ((NET_CONN_CHCK_RES << 16) | (checkBytes & 0xFFFF))) == 0)
     {
         JOY_TRANS = 0;
@@ -327,7 +314,6 @@ static void DoTransferDataBlock(u8 taskId)
     else
     {
         for (i = 0; i < 300; i++) {}
-        DebugPrintfLevel(MGBA_LOG_DEBUG, "Check did not match expecting %x%x, returned %x. Will Retry:",  NET_CONN_CHCK_RES, checkBytes, JOY_RECV);
     }
 }
 
@@ -351,11 +337,7 @@ static void DoReceiveDataBlock(u8 taskId)
 
     }
 
-    DebugPrintfLevel(MGBA_LOG_DEBUG, "Receive Check bytes Before %x", checkBytes);
-
     xfer16(sSendRecvMgr.cmd, (u16) sSendRecvMgr.length, taskId);
-
-    DebugPrintfLevel(MGBA_LOG_DEBUG, "Check bytes Post CMD %x", checkBytes);
 
     if (sSendRecvMgr.state == NET_CONN_STATE_ERROR)
         return;
@@ -376,21 +358,16 @@ static void DoReceiveDataBlock(u8 taskId)
         if (i + 2 < sSendRecvMgr.length) dataStart[i + 2] = transBuff[2];
         if (i + 3 < sSendRecvMgr.length) dataStart[i + 3] = transBuff[3];
 
-        DebugPrintfLevel(MGBA_LOG_DEBUG, "Got Values From Wii %x %x %x %x", transBuff[0], transBuff[1], transBuff[2], transBuff[3]);
-
         if (sSendRecvMgr.state == NET_CONN_STATE_ERROR)
             return;
 
         checkBytes ^= (u16) (transBuff[0] + (transBuff[1] << 8));
         checkBytes ^= (u16) (transBuff[2] + (transBuff[3] << 8));
 
-        DebugPrintfLevel(MGBA_LOG_DEBUG, "Check bytes %d Post Send %x", i, checkBytes);
     }
 
     resBuff = recv32(taskId);
-    DebugPrintfLevel(MGBA_LOG_DEBUG, "Response from wii %x", resBuff);
 
-    
     if (sSendRecvMgr.disableChecks || (resBuff ^ (u32) ((NET_CONN_CHCK_RES << 16) | (checkBytes & 0xFFFF))) == 0)
     {
         JOY_RECV = 0;
@@ -399,7 +376,6 @@ static void DoReceiveDataBlock(u8 taskId)
     else
     {
         for (i = 0; i < 300; i++) {}
-        DebugPrintfLevel(MGBA_LOG_DEBUG, "Check did not match expecting %x%x, returned %x. Will Retry:",  NET_CONN_CHCK_RES, checkBytes, JOY_RECV);
     }
 }
 
@@ -467,28 +443,18 @@ void configureSendRecvMgrChunked(u16 cmd, vu32 * dataStart, u16 length, u8 state
 {
     if (length <= chunkSize || chunkSize <= 0)
     {
-        DebugPrintfLevel(MGBA_LOG_DEBUG, "--- TO SMALL TO CHUNK");
         configureSendRecvMgr(cmd, dataStart, length, state, nextProcessStep);
     }
     else if (chunkSize * (sSendRecvMgr.repeatedStepCount + 1) < length)
     {
-        DebugPrintfLevel(MGBA_LOG_DEBUG, "--- %x PART OF CHUNK", sSendRecvMgr.repeatedStepCount);
-        DebugPrintfLevel(MGBA_LOG_DEBUG, "CMD: %x", cmd + ((chunkSize * sSendRecvMgr.repeatedStepCount)/MINIMUM_CHUNK_SIZE));
-        DebugPrintfLevel(MGBA_LOG_DEBUG, "Writing to address: %x + %x * %x = %x", dataStart, chunkSize, sSendRecvMgr.repeatedStepCount, (dataStart + (chunkSize * sSendRecvMgr.repeatedStepCount)));
         configureSendRecvMgr(cmd + ((chunkSize * sSendRecvMgr.repeatedStepCount)/MINIMUM_CHUNK_SIZE), (vu32 *) dataStart + (chunkSize/4 * sSendRecvMgr.repeatedStepCount), chunkSize, state, sSendRecvMgr.nextProcessStep);
     }
     else if (chunkSize * (sSendRecvMgr.repeatedStepCount + 1) == length)
     {
-        DebugPrintfLevel(MGBA_LOG_DEBUG, "--- FINAL PART OF FULL CHUNK");
-        DebugPrintfLevel(MGBA_LOG_DEBUG, "CMD: %x", cmd + ((chunkSize * sSendRecvMgr.repeatedStepCount)/MINIMUM_CHUNK_SIZE));
-        DebugPrintfLevel(MGBA_LOG_DEBUG, "Writing to address: %x + %x * %x = %x", dataStart, chunkSize, sSendRecvMgr.repeatedStepCount, (dataStart + (chunkSize * sSendRecvMgr.repeatedStepCount)));
         configureSendRecvMgr(cmd + ((chunkSize * sSendRecvMgr.repeatedStepCount)/MINIMUM_CHUNK_SIZE), (vu32 *) dataStart + (chunkSize/4 * sSendRecvMgr.repeatedStepCount), chunkSize, state, nextProcessStep);
     }
     else
     {
-        DebugPrintfLevel(MGBA_LOG_DEBUG, "--- FINAL PART OF PARTIAL CHUNK");
-        DebugPrintfLevel(MGBA_LOG_DEBUG, "CMD: %x", cmd + ((chunkSize * sSendRecvMgr.repeatedStepCount)/MINIMUM_CHUNK_SIZE));
-        DebugPrintfLevel(MGBA_LOG_DEBUG, "Writing to address: %x", (dataStart + (chunkSize * sSendRecvMgr.repeatedStepCount)));
         configureSendRecvMgr(cmd + ((chunkSize * sSendRecvMgr.repeatedStepCount)/MINIMUM_CHUNK_SIZE), (vu32 *) dataStart + (chunkSize/4 * sSendRecvMgr.repeatedStepCount), length % chunkSize, state, nextProcessStep);
     }
 }
@@ -526,7 +492,6 @@ static void SetupForLinkTask()
 
 static void Task_LinkupCancel(u8 taskId)
 {
-    DebugPrintfLevel(MGBA_LOG_DEBUG, "--- LINKUP BEING CANCELED");
     gSpecialVar_0x8003 = NET_STAT_OFFLINE;
     Task_EndLinkupConnection(taskId);
 }
@@ -536,28 +501,23 @@ static void Task_LinkupProcess(u8 taskId)
     switch (sSendRecvMgr.nextProcessStep)
     {
         case LINKUP_SEND_PLAYER_DATA:
-            DebugPrintfLevel(MGBA_LOG_DEBUG, "--- LINKUP_SEND_PLAYER_DATA");
             configureSendRecvMgr(NET_CONN_SEND_REQ, (vu32 *) &gSaveBlock2Ptr->playerName[0], PLAYER_INFO_LENGTH, NET_CONN_STATE_SEND, LINKUP_APPEND_GAME_NAME);
             break;
 
         case LINKUP_APPEND_GAME_NAME:
-            DebugPrintfLevel(MGBA_LOG_DEBUG, "--- LINKUP_APPEND_GAME_NAME");
             configureSendRecvMgr(NET_CONN_SCH2_REQ, (vu32 *) &sNetGameName[0], NET_GAME_NAME_LENGTH, NET_CONN_STATE_SEND, LINKUP_USE_DATA_AS_PLAYER_INFO);
             break;
 
         case LINKUP_USE_DATA_AS_PLAYER_INFO:
-            DebugPrintfLevel(MGBA_LOG_DEBUG, "--- LINKUP_USE_DATA_AS_PLAYER_INFO");
             configureSendRecvMgr(NET_CONN_PINF_REQ, 0, 0, NET_CONN_STATE_SEND, LINKUP_SEND_NETWORK_INFO);
             break;
 
         case LINKUP_SEND_NETWORK_INFO:
-            DebugPrintfLevel(MGBA_LOG_DEBUG, "--- LINKUP_SEND_NETWORK_INFO");
             sSendRecvMgr.retryPoint = LINKUP_SEND_NETWORK_INFO;
             configureSendRecvMgr(NET_CONN_SEND_REQ, (vu32 *) &sNetServerAddr[0], NET_SERVER_ADDR_LENGTH, NET_CONN_STATE_SEND, LINKUP_USE_DATA_AS_NETWORK_INFO);
             break;
 
         case LINKUP_USE_DATA_AS_NETWORK_INFO:
-            DebugPrintfLevel(MGBA_LOG_DEBUG, "--- LINKUP_USE_DATA_AS_NETWORK_INFO");
             configureSendRecvMgr(NET_CONN_CINF_REQ, 0, 0, NET_CONN_STATE_SEND, LINKUP_WAIT_FOR_SERVER_TO_CONNECT);
             break;
 
@@ -567,17 +527,14 @@ static void Task_LinkupProcess(u8 taskId)
             break;
 
         case LINKUP_REQUEST_NETWORK_STATUS:
-            DebugPrintfLevel(MGBA_LOG_DEBUG, "--- LINKUP_REQUEST_NETWORK_STATUS");
             sSendRecvMgr.disableChecks = TRUE; 
             sSendRecvMgr.retryPoint = LINKUP_REQUEST_NETWORK_STATUS;
             configureSendRecvMgr(NET_CONN_LIFN_REQ, (vu32 *) &gStringVar3[0], 4, NET_CONN_STATE_RECEIVE, LINKUP_HANDLE_NETWORK_STATUS_OUTCOME);
             break;
 
         case LINKUP_HANDLE_NETWORK_STATUS_OUTCOME:
-            DebugPrintfLevel(MGBA_LOG_DEBUG, "--- LINKUP_HANDLE_NETWORK_STATUS_OUTCOME");
             if (!(NET_CONN_LIFN_REQ >> 8 == gStringVar3[0] && (NET_CONN_LIFN_REQ & 0x00FF) == gStringVar3[1]))
             {
-                DebugPrintfLevel(MGBA_LOG_DEBUG, "--- UNEXPECTED RESULT %x ", (u16) (gStringVar3[0] | gStringVar3[1] << 8));
                 sSendRecvMgr.nextProcessStep = LINKUP_REQUEST_NETWORK_STATUS;
             }
             else if (gStringVar3[3] >= NETWORK_MIN_ERROR)
@@ -600,8 +557,6 @@ static void Task_LinkupProcess(u8 taskId)
             sSendRecvMgr.disableChecks = FALSE;
             if (sSendRecvMgr.repeatedStepCount == 0)
             {
-                DebugPrintfLevel(MGBA_LOG_DEBUG, "--- Network Status is %x %x %x %x", gStringVar3[0], gStringVar3[1], gStringVar3[2], gStringVar3[3]);
-                DebugPrintfLevel(MGBA_LOG_DEBUG, "--- LINKUP_RECEIVE_WELCOME_MESSAGE");
                 sSendRecvMgr.retryPoint = LINKUP_RECEIVE_WELCOME_MESSAGE;
                 StringCopy(gStringVar3, sServerName);
             }
@@ -610,7 +565,6 @@ static void Task_LinkupProcess(u8 taskId)
 
         case LINKUP_FINISH:
         default:
-            DebugPrintfLevel(MGBA_LOG_DEBUG, "--- LINKUP_FINISH");
             gStringVar3[SERVER_NAME_LENGTH + WELCOME_MSG_LENGTH] = 0xFF; // Force the message to end if they never never terminated it 
             sSendRecvMgr.state = NET_CONN_STATE_DONE;
             break;
@@ -664,13 +618,11 @@ static void Task_DownloadBattleProcess(u8 taskId)
     switch (sSendRecvMgr.nextProcessStep)
     {
         case DOWNLOAD_BATTLE_SEND_REQUEST: // Puts request data on the wii  (at address channel 2)
-            DebugPrintfLevel(MGBA_LOG_DEBUG, "--- DOWNLOAD_BATTLE_SEND_REQUEST");
             gStringVar3[0] = 'B'; gStringVar3[1] = 'A'; gStringVar3[2] = '_'; gStringVar3[3] = '1'; // The '1' at the end is for if we want multiple downloadable trainers
             configureSendRecvMgr(NET_CONN_SCH2_REQ, (vu32 *) &gStringVar3[0], 4, NET_CONN_STATE_SEND, DOWNLOAD_BATTLE_TRANSMIT_REQUEST);
             break;
 
         case DOWNLOAD_BATTLE_TRANSMIT_REQUEST: // Sends request data to the server (from address channel 2)
-            DebugPrintfLevel(MGBA_LOG_DEBUG, "--- DOWNLOAD_BATTLE_TRANSMIT_REQUEST");
             sSendRecvMgr.disableChecks = TRUE; // The wii code currently dosn't support transmit checks so they need to be off for transmit
             sSendRecvMgr.retryPoint = DOWNLOAD_BATTLE_TRANSMIT_REQUEST;
             CpuFill32(0, &gStringVar3, sizeof(gStringVar3));  
@@ -688,7 +640,6 @@ static void Task_DownloadBattleProcess(u8 taskId)
             sSendRecvMgr.disableChecks = FALSE;
             if (sSendRecvMgr.repeatedStepCount == 0)
             {
-                DebugPrintfLevel(MGBA_LOG_DEBUG, "--- DOWNLOAD_BATTLE_RECIEVE_DATA");
                 sSendRecvMgr.retryPoint = DOWNLOAD_BATTLE_RECIEVE_DATA;
             }
             configureSendRecvMgrChunked(NET_CONN_RCHF0_REQ, (vu32 *) &gStringVar3[0], DOWNLOAD_TRAINER_POKEMON_SIZE * DOWNLOAD_TRAINER_PARTY_SIZE, NET_CONN_STATE_RECEIVE, DOWNLOAD_BATTLE_FINISH, MINIMUM_CHUNK_SIZE);
@@ -701,7 +652,6 @@ static void Task_DownloadBattleProcess(u8 taskId)
             u8 i;
             u8 offset = 0;
 
-            DebugPrintfLevel(MGBA_LOG_DEBUG, "--- DOWNLOAD_BATTLE_FINISH");
             FillEReaderTrainerWithPlayerData();
             StringFill(gSaveBlock2Ptr->frontier.ereaderTrainer.name, CHAR_SPACER, PLAYER_NAME_LENGTH);
             StringCopy_PlayerName(gSaveBlock2Ptr->frontier.ereaderTrainer.name, trainerName);
@@ -806,13 +756,11 @@ static void Task_OnlineMartProcess(u8 taskId)
     switch (sSendRecvMgr.nextProcessStep)
     {
         case DOWNLOAD_MART_SEND_REQUEST:
-            DebugPrintfLevel(MGBA_LOG_DEBUG, "--- DOWNLOAD_MART_SEND_REQUEST");
             gStringVar3[0] = 'M'; gStringVar3[1] = 'A'; gStringVar3[2] = '_'; gStringVar3[3] = '1';
             configureSendRecvMgr(NET_CONN_SCH2_REQ, (vu32 *) &gStringVar3[0], 4, NET_CONN_STATE_SEND, DOWNLOAD_MART_TRANSMIT_REQUEST);
             break;
 
         case DOWNLOAD_MART_TRANSMIT_REQUEST:
-            DebugPrintfLevel(MGBA_LOG_DEBUG, "--- DOWNLOAD_MART_TRANSMIT_REQUEST");
             sSendRecvMgr.disableChecks = TRUE; 
             sSendRecvMgr.retryPoint = DOWNLOAD_MART_TRANSMIT_REQUEST;
             CpuFill32(0, &gStringVar3, sizeof(gStringVar3)); 
@@ -828,7 +776,6 @@ static void Task_OnlineMartProcess(u8 taskId)
             sSendRecvMgr.disableChecks = FALSE;
             if (sSendRecvMgr.repeatedStepCount == 0)
             {
-                DebugPrintfLevel(MGBA_LOG_DEBUG, "--- DOWNLOAD_MART_RECEIVE_DATA");
                 sSendRecvMgr.retryPoint = DOWNLOAD_MART_RECEIVE_DATA;
             }
             configureSendRecvMgrChunked(NET_CONN_RCHF0_REQ, (vu32 *) &gStringVar3[0], 16, NET_CONN_STATE_RECEIVE, DOWNLOAD_MART_FINISH, MINIMUM_CHUNK_SIZE);
@@ -838,7 +785,6 @@ static void Task_OnlineMartProcess(u8 taskId)
         default:
         {
             u8 i;
-            DebugPrintfLevel(MGBA_LOG_DEBUG, "--- DOWNLOAD_MART_FINISH");
             gSpecialVar_0x8003 = 1;
             for (i = 0; i < DOWNLOAD_MART_SIZE; i++)
             {
@@ -907,13 +853,11 @@ static void Task_GiftEggProcess(u8 taskId)
     switch (sSendRecvMgr.nextProcessStep)
     {
         case DOWNLOAD_GIFT_EGG_SEND_REQUEST:
-            DebugPrintfLevel(MGBA_LOG_DEBUG, "--- DOWNLOAD_GIFT_EGG_SEND_REQUEST");
             gStringVar3[0] = 'G'; gStringVar3[1] = 'E'; gStringVar3[2] = '_'; gStringVar3[3] = '1';
             configureSendRecvMgr(NET_CONN_SCH2_REQ, (vu32 *) &gStringVar3[0], 4, NET_CONN_STATE_SEND, DOWNLOAD_GIFT_EGG_TRANSMIT_REQUEST);
             break;
 
         case DOWNLOAD_GIFT_EGG_TRANSMIT_REQUEST:
-            DebugPrintfLevel(MGBA_LOG_DEBUG, "--- DOWNLOAD_GIFT_EGG_TRANSMIT_REQUEST");
             sSendRecvMgr.disableChecks = TRUE; 
             sSendRecvMgr.retryPoint = DOWNLOAD_GIFT_EGG_TRANSMIT_REQUEST;
             CpuFill32(0, &gStringVar3, sizeof(gStringVar3)); 
@@ -926,11 +870,9 @@ static void Task_GiftEggProcess(u8 taskId)
             break;
 
         case DOWNLOAD_GIFT_EGG_RECEIVE_DATA:
-            DebugPrintfLevel(MGBA_LOG_DEBUG, "--- DOWNLOAD_GIFT_EGG_RECEIVE_DATA");
             sSendRecvMgr.disableChecks = FALSE;
             if (sSendRecvMgr.repeatedStepCount == 0)
             {
-                DebugPrintfLevel(MGBA_LOG_DEBUG, "--- DOWNLOAD_MART_RECEIVE_DATA");
                 sSendRecvMgr.retryPoint = DOWNLOAD_MART_RECEIVE_DATA;
             }
             configureSendRecvMgrChunked(NET_CONN_RCHF0_REQ, (vu32 *) &gStringVar3[0], 4, NET_CONN_STATE_RECEIVE, DOWNLOAD_GIFT_EGG_FINISH, MINIMUM_CHUNK_SIZE);
@@ -938,7 +880,6 @@ static void Task_GiftEggProcess(u8 taskId)
 
         case DOWNLOAD_GIFT_EGG_FINISH:
         default:
-            DebugPrintfLevel(MGBA_LOG_DEBUG, "--- DOWNLOAD_GIFT_EGG_FINISH");
             sSendRecvMgr.state = NET_CONN_STATE_DONE;
             gSpecialVar_0x8003 = (u16) (gStringVar3[0] | gStringVar3[1] << 8);
             gSpecialVar_0x8005 = (u16) (gStringVar3[2] | gStringVar3[3] << 8);
@@ -1006,7 +947,6 @@ static void Task_TradeProcess(u8 taskId)
     switch (sSendRecvMgr.nextProcessStep)
     {
         case TRADE_CLEAR_LAST_PARTNER:
-            DebugPrintfLevel(MGBA_LOG_DEBUG, "--- TRADE_CLEAR_LAST_PARTNER");
             // We need to clear the wii data here so we don't pull stale trade data
             // Normally we'd use the NET_CONN_BCLR_REQ command but I'm currently getting weird issues
             gStringVar3[0] = 0; gStringVar3[1] = 0; gStringVar3[2] = 0; gStringVar3[3] = 0;
@@ -1014,19 +954,16 @@ static void Task_TradeProcess(u8 taskId)
             break;
 
         case TRADE_SEND_REQUEST:
-            DebugPrintfLevel(MGBA_LOG_DEBUG, "--- TRADE_SEND_REQUEST");
             gStringVar3[0] = 'T'; gStringVar3[1] = 'R'; gStringVar3[2] = '_'; gStringVar3[3] = '0';
             configureSendRecvMgr(NET_CONN_SEND_REQ, (vu32 *) &gStringVar3[0], 4, NET_CONN_STATE_SEND, TRADE_APPEND_MON_DATA);
             break;
 
         case TRADE_APPEND_MON_DATA:
-            DebugPrintfLevel(MGBA_LOG_DEBUG, "--- TRADE_APPEND_MON_DATA");
             sSendRecvMgr.retryPoint = TRADE_APPEND_MON_DATA;
             configureSendRecvMgrChunked(NET_CONN_SCH1_REQ, (vu32 *) &gPlayerParty[gSpecialVar_0x8005], sizeof(struct Pokemon), NET_CONN_STATE_SEND, TRADE_TRANSMIT_REQUEST, MINIMUM_CHUNK_SIZE);
             break;
 
         case TRADE_TRANSMIT_REQUEST:
-            DebugPrintfLevel(MGBA_LOG_DEBUG, "--- TRADE_TRANSMIT_REQUEST");
             sSendRecvMgr.disableChecks = TRUE; 
             sSendRecvMgr.retryPoint = TRADE_TRANSMIT_REQUEST;
             sSendRecvMgr.allowCancel = FALSE;
@@ -1041,7 +978,6 @@ static void Task_TradeProcess(u8 taskId)
         case TRADE_RECEIVE_NAME_DATA:
             // We don't know when the other player connected to us (or if there is a connection at all). 
             // So wait. Pull a little bit of data. If we got some data wait again. Then pull the whole thing  
-            DebugPrintfLevel(MGBA_LOG_DEBUG, "--- TRADE_RECEIVE_NAME_DATA");
             sSendRecvMgr.disableChecks = FALSE;
             if (sSendRecvMgr.repeatedStepCount == 0)
             {
@@ -1062,8 +998,6 @@ static void Task_TradeProcess(u8 taskId)
                     gSpecialVar_0x8003 = 0; // Back to error state
                     sSendRecvMgr.nextProcessStep = TRADE_WAIT_SHORT_FOR_SERVER;
                 }
-
-                DebugPrintfLevel(MGBA_LOG_DEBUG, "--- stringData %x", gStringVar3[i]);
             }
             break;
         }
@@ -1074,7 +1008,6 @@ static void Task_TradeProcess(u8 taskId)
             break;
 
         case TRADE_RECEIVE_FULL_DATA:
-            DebugPrintfLevel(MGBA_LOG_DEBUG, "--- TRADE_RECEIVE_FULL_DATA");
             if (sSendRecvMgr.repeatedStepCount == 0)
             {
                 CpuFill32(0, &gEnemyParty, sizeof(gEnemyParty));     
@@ -1087,20 +1020,14 @@ static void Task_TradeProcess(u8 taskId)
         default:
         {
             u16 species = GetMonData(&gEnemyParty[0], MON_DATA_SPECIES);
-            DebugPrintfLevel(MGBA_LOG_DEBUG, "--- TRADE_FINISH");
 
             if (gSpecialVar_0x8003 != 1)
             {
                 if (!(gEnemyParty[0].box.isBadEgg) && !(species > SPECIES_EGG))
                 {
-                    DebugPrintfLevel(MGBA_LOG_DEBUG, "--- We got back valid trade data");
                     gSpecialVar_0x8003 = 2;
                     gStringVar3[PLAYER_NAME_LENGTH + 1] = 0xFF;
                     gSpecialVar_0x8004 = 100; // This makes the in game trade use special values for name
-                }
-                else 
-                {
-                    DebugPrintfLevel(MGBA_LOG_DEBUG, "--- We got back invalid trade data");
                 }
             }
             sSendRecvMgr.state = NET_CONN_STATE_DONE;
