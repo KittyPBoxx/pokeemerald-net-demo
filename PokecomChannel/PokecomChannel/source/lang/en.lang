@@ -1,6 +1,8 @@
 ### Main ###
 msgid "main.title"
 msgstr "Pokecom Channel"
+msgid "main.version"
+msgstr "v0.1.1"
 msgid "main.network"
 msgstr "Configure Network"
 msgid "main.exit"
