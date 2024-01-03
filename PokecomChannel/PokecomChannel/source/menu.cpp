@@ -722,6 +722,10 @@ static int NetworkConfigurationMenu(GuiSound* bgMusic, LinkCableClient * gbas[4]
 	titleTxt.SetPosition(50,50);
 	titleTxt.SetEffect(EFFECT::SLIDE_TOP | EFFECT::SLIDE_IN, 25);
 
+	GuiText versionTxt(gettext("main.version"), 12, (GXColor){255, 255, 255, 15});
+	versionTxt.SetAlignment(ALIGN_H::RIGHT, ALIGN_V::TOP);
+	versionTxt.SetPosition(-20,20);
+
 	GuiSound btnSoundOver(button_over_pcm, button_over_pcm_size, SOUND::PCM);
 	btnSoundOver.SetVolume(20);
 	GuiImageData btnOutline(button_png);
@@ -775,6 +779,7 @@ static int NetworkConfigurationMenu(GuiSound* bgMusic, LinkCableClient * gbas[4]
 	w.Append(&testConnectionBtn);
 	mainWindow->Append(&w);
 	mainWindow->Append(&titleTxt);
+	mainWindow->Append(&versionTxt);
 	ResumeGui();
 
 	while(menu == MENU_NONE)
@@ -798,6 +803,7 @@ static int NetworkConfigurationMenu(GuiSound* bgMusic, LinkCableClient * gbas[4]
 
 	mainWindow->Remove(&w);
 	mainWindow->Remove(&titleTxt);
+	mainWindow->Remove(&versionTxt);
 	return menu;
 }
 
