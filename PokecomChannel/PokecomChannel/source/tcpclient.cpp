@@ -164,16 +164,31 @@ static void *httpd (TCPConnector *connector)
     if (inet_aton(ipOrDomainName, &ipTest))
 	{
 		memset (&server, 0, sizeof (struct sockaddr_in));
-		server.sin_family= AF_INET;
+		server.sin_family = AF_INET;
 		server.sin_len = sizeof (struct sockaddr_in); 
-		server.sin_port= htons (port);
+		server.sin_port = htons (port);
 		server.sin_addr.s_addr = inet_addr(ipOrDomainName);
 	}
 	else 
     {
-		connector->connectionResult = CONNECTION_ERROR_INVALID_IP;
-		connector->threadActive = 0;
-		return NULL;
+		struct hostent *hp = net_gethostbyname(ipOrDomainName);
+		
+		if (!(hp->h_addrtype == PF_INET)) 
+        {
+			connector->connectionResult = CONNECTION_ERROR_COULD_NOT_RESOLVE_IPV4;
+			connector->threadActive = 0;
+			return NULL;
+		} 
+
+		memset (&server, 0, sizeof (struct sockaddr_in));
+		server.sin_family = AF_INET;
+		server.sin_len = sizeof (struct sockaddr_in); 
+		server.sin_port = htons (port);
+
+		struct in_addr **addr_list;
+		addr_list = (struct in_addr **)hp->h_addr_list;
+		char* resolvedIP = inet_ntoa(*addr_list[0]);
+		server.sin_addr.s_addr = inet_addr(resolvedIP);
 	} 
 
 	int sock = -1;

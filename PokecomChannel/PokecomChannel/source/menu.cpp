@@ -94,6 +94,9 @@ static const char * resolveNetworkMessage(u8 state, TCPClient* client)
 		case CONNECTION_ERROR_INVALID_IP: 
 			return gettext("networkTest.CONNECTION_ERROR_INVALID_IP");
 		break;
+		case CONNECTION_ERROR_COULD_NOT_RESOLVE_IPV4:
+			return gettext("networkTest.CONNECTION_ERROR_COULD_NOT_RESOLVE_IPV4");
+		break;
 		case CONNECTION_ERROR_NO_NETWORK_DEVICE: 
 			return gettext("networkTest.CONNECTION_ERROR_NO_NETWORK_DEVICE");
 		break;

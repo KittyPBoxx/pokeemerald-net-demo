@@ -200,8 +200,20 @@ case DOWNLOAD_MART_RECEIVE_DATA:
     break;
 ```
 
-
 🗒️ I strongly recommend always making `chunkSize` 16. And alway making sure you are transmitting a multiple of 4 bytes as nothing else has really been tested 
+
+## Configure A Server
+
+By default the rom is configured to try and connect to localhost port 9000. This config is passed from the rom when trying to start a connection to a server (although there is a mechanism to force a different address to be used in the wii channel).
+
+You can configure the game to connect to your server by changing the values of `NET_SERVER_ADDR_LENGTH` and `sNetServerAddr` in `net_conn.c`. Your server must accept TCP connections using an IPV4 address (IPV6 is not supported). However as of channel v0.1.1 it will attempt to resolve domain names to an IPV4 address. Some examples of values that could be used for `sNetServerAddr` are:
+
+- 127.0.0.1:9000
+- example.com:8089 (> v0.1.1)
+
+🗒️ The maximum address length (including port) is 32 characters. i.e `NET_SERVER_ADDR_LENGTH` should never be more than 32. Personally I recommend trying to keep it less than 16 chars. I also *think* it needs to only be letters with an 8 bit ascii encoding so things like `.みん‍な` probably will not work. 
+
+Additionally an override ip address can be configured on the wii using the `Netowrk Config` menu. Once a sucessful connection has been made from this menu all NEW gba connections will use the override address. This will not effect old connections (even if they were unsucessful) i.e you can only configure the override address while the Wii still reads 'Waiting'. Once it shows the player name the the network config from the rom will always be used (until the channel is restarted).
 
 ## For other Decomp/Disassembly projects see:
 

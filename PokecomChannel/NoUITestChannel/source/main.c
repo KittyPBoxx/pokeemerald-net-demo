@@ -124,6 +124,7 @@ enum {
     CONNECTION_SUCCESS, // Bind to remote address
     CONNECTION_READY, // Ready to start a connection
 	CONNECTION_ERROR_INVALID_IP, // Not a valid IPv4 Addr
+	CONNECTION_ERROR_COULD_NOT_RESOLVE_IPV4, // DNS resolution returned no valid ip addresses
     CONNECTION_ERROR_NO_NETWORK_DEVICE, // No network device (e.g wifi card or ethernet) could be found. The may be an emulator that has no support or a wii mini (which has no wifi)
     CONNECTION_ERROR_CONNECTION_FAILED, // Failed to bind the the address
     CONNECTION_ERROR_INVALID_RESPONSE // Handshake failed when we send RUBY_SAPPHIRE we expect a response SN_<NAME_OF_SERVER>
@@ -293,14 +294,13 @@ void *httpd (TCPConnector *connector) {
     }
 	else 
 	{
-		printf("Failed - Invalid IP");
+		printf("Failed - No port provided in %s", addrCopy);
 		connector->connectionResult = CONNECTION_ERROR_INVALID_IP;
 		connector->threadActive = 0;
 		return NULL;
 	}
 
 	struct sockaddr_in server;
-
 	struct in_addr ipTest;
     if (inet_aton(ipOrDomainName, &ipTest))
 	{
@@ -309,17 +309,31 @@ void *httpd (TCPConnector *connector) {
 		server.sin_len = sizeof (struct sockaddr_in); 
 		server.sin_port= htons (port);
 		server.sin_addr.s_addr = inet_addr(ipOrDomainName);
+		printf("Creating Connection port %s at address %s\n\n", portString, ipOrDomainName);
 	}
 	else 
     {
-		printf("Failed - Invalid IP");
-		connector->connectionResult = CONNECTION_ERROR_INVALID_IP;
-		connector->threadActive = 0;
-		return NULL;
+		struct hostent *hp = net_gethostbyname(ipOrDomainName);
+		
+		if (!(hp->h_addrtype == PF_INET)) 
+        {
+			printf("Failed - IPV4 returned for address %s (may only be ipv6)", addrCopy);
+			connector->connectionResult = CONNECTION_ERROR_COULD_NOT_RESOLVE_IPV4;
+			connector->threadActive = 0;
+			return NULL;
+		} 
+
+		memset (&server, 0, sizeof (struct sockaddr_in));
+		server.sin_family = AF_INET;
+		server.sin_len = sizeof (struct sockaddr_in); 
+		server.sin_port = htons (port);
+
+		struct in_addr **addr_list;
+		addr_list = (struct in_addr **)hp->h_addr_list;
+		char* resolvedIP = inet_ntoa(*addr_list[0]);
+		server.sin_addr.s_addr = inet_addr(resolvedIP);
+		printf("Creating Connection port %s at address %s using ip (%s)\n\n", portString, ipOrDomainName, resolvedIP);
 	} 
-
-	printf("Creating Connection port %s at address %s\n\n", portString, ipOrDomainName);
-
 
 	int sock = -1;
 	int active = 1;

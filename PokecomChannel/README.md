@@ -58,6 +58,19 @@ On the wii channel main screen you can press `minus` for some debug info. Theres
 
 If you want to debug on a simpler version that prints info to the screen you can use the "no UI" channel. This channel has fewer features and only supports 1 gba in port 1. 
 
+## Resolving Addresses
+
+The channel can only connect to TCP servers that have an available ipv4 address. However as of version v0.1.1 the channel will try and resolve domain names to an ipv4 if they are passed from the rom. Here are a couple of examples of addresses that could be passed from the rom and the channel should work with:
+
+- 127.0.0.1:9000
+- example.com:8089 (> v0.1.1)
+
+The character limit for these addresses (including port) is 32 characters. 
+
+Ip addresses can be tested from the `Network Config` menu within the channel. However this can cannot currently be used to test domain names. If you want to check the domain name is working from a linux machine you can run a command like `getent ahosts example.com`. Note that if multiple ipv4 addresses are returned in the address list then it will always pick the first one.
+
+When you test a connection in the `Network Config` and it is successful all NEW gba connections will be sent to that address. However if the gba has already tried to make a connection (using config passed from the rom) then the config passed from the rom will still be used (even if it never made a successful connection). i.e if the channel still stays 'Waiting' rather than the player name the connection can be overriden. If it shows the player name the connection cannot be changed without restarting the channel.
+
 ##  Banner / WAD editing
 
 To create/modify the wad you can use CustomizeMii (https://wiibrew.org/wiki/CustomizeMii) [customizemii 3.11-1]

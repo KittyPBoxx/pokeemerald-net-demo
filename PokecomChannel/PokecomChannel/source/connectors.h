@@ -74,6 +74,7 @@ enum {
     CONNECTION_SUCCESS, // Bind to remote address
     CONNECTION_READY, // Ready to start a connection
 	CONNECTION_ERROR_INVALID_IP, // Not a valid IPv4 Addr
+	CONNECTION_ERROR_COULD_NOT_RESOLVE_IPV4, // DNS resolution returned no valid ip addresses
     CONNECTION_ERROR_NO_NETWORK_DEVICE, // No network device (e.g wifi card or ethernet) could be found. The may be an emulator that has no support or a wii mini (which has no wifi)
     CONNECTION_ERROR_CONNECTION_FAILED, // Failed to bind the the address
     CONNECTION_ERROR_INVALID_RESPONSE // Handshake failed when we send RUBY_SAPPHIRE we expect a response SN_<NAME_OF_SERVER>
