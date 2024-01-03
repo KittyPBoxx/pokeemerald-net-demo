@@ -1,8 +1,19 @@
 # Pokémon Emerald - Net Demo
 
+## Install
+
 This is a decompilation of Pokémon Emerald.
 
 To set up the repository, see [INSTALL.md](INSTALL.md).
+
+## Debugging
+
+The version of mgba integrated into dolphin does not have a console to read logs. If you want to debug the game by printing logs you will need to use select GBA (TCP) in dolphin (instead of integrated) then open a seperate instance of mgba. Run the Wii Channel, then in mgba go to file > connect to dolphin and hope it connects. This connection has higher latency than the integrated version and if the initial connection to dolphin fails you need to restart both dolphin and mgba and try again. Repeat this until it works.
+
+To enable logging in pokeemerald go to config.h and uncomment the line `#define NDEBUG`. You can then print logs like so:  
+``` 
+DebugPrintfLevel(MGBA_LOG_DEBUG, "Some Log Message"); 
+```
 
 ## Creating Network Tasks
 

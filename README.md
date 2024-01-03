@@ -112,11 +112,12 @@ The game server runs at localhost:9000 so dolphin should automatically be able t
 * The player in the wii channel will show as "Waiting" untill you talk to the terminal at the Lilycove Network Center
 * If you are starting a new save, Norman will be waiting in Oldale to take you to Lilycove. Once there head to the North-Eastern building and speak to the terminal.
 
-## Dev Guide *(I'm working on docs)*
+## Dev Guide 
 
-Each readme had some documentation. The pokeemerald project has the most detail.
+Dev info for each of the projects can be found their project folders:
 
-- Build pokeemerald as you normally would.
-- run the dev server with `npm run start`, build the executables with `npm run build`
-- You can use mgba over tcp with dolphin for debugging the gba (it's already printing lots of logs)
-- On the wii channel you can press `minus` for some debug info. There's also a slightly different "no UI" channel that prints info to the screen
+[Poke Emerald (GBA)](pokeemerald/README.md)
+
+[Celio Server (Web Server)](CelioServer/README.md)
+
+[Pokecom Channel (Wii)](PokecomChannel/README.md)
