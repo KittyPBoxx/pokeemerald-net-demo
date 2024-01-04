@@ -109,5 +109,6 @@
 #define NET_CONN_START_MART_FUNC        2
 #define NET_CONN_START_EGG_FUNC         3
 #define NET_CONN_TRADE_FUNC             4
+#define NET_CONN_RETRY_TRADE_FUNC       5
 
 #endif //GUARD_CONSTANTS_NETWORK_H

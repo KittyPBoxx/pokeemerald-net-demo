@@ -73,6 +73,17 @@ LilycoveCity_GTS_F2_EventScript_Trade::
 	release
 	end
 
+LilycoveCity_GTS_F2_EventScript_TradeRetry::
+	setvar VAR_0x8004, NET_CONN_RETRY_TRADE_FUNC
+	special CallNetworkFunction
+	waitstate
+	goto_if_eq VAR_0x8003, 0, LilycoveCity_GTS_F2_EventScript_ConnectionEnded
+	goto_if_eq VAR_0x8003, 1, LilycoveCity_GTS_F2_EventScript_NoPartner
+	special DoInGameTradeScene
+	waitstate
+	release
+	end
+
 LilycoveCity_GTS_F2_EventScript_NetShop::
 	setvar VAR_0x8004, NET_CONN_START_MART_FUNC
 	special CallNetworkFunction
@@ -125,7 +136,9 @@ LilycoveCity_GTS_F2_EventScript_DeclineTrade::
 	end
 
 LilycoveCity_GTS_F2_EventScript_NoPartner::
-	msgbox LilycoveCity_GTS_F2_Text_NoPartner, MSGBOX_NPC
+	msgbox LilycoveCity_GTS_F2_Text_NoPartner, MSGBOX_YESNO
+	goto_if_eq VAR_RESULT, YES, LilycoveCity_GTS_F2_EventScript_TradeRetry
+	closemessage
 	end
 
 LilycoveCity_GTS_F2_EventScript_ConnectionEnded::
@@ -159,7 +172,8 @@ LilycoveCity_GTS_F2_Text_PleaseConfirmTrade::
 	.string "YOU WON'T BE ABLE TO CANCEL THIS!$"
 
 LilycoveCity_GTS_F2_Text_NoPartner::
-	.string "No trade partner found.$"
+	.string "No trade partner found.\n"
+	.string "Do you want to search again?$"
 
 LilycoveCity_GTS_F2_Text_TakeGoodCareOfEgg::
 	.string "Take good care of the EGG.$"

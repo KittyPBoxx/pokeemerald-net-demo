@@ -82,6 +82,9 @@ static void Task_TradeCancel(u8 taskId);
 static void Task_TradeProcess(u8 taskId);
 static void Task_EndTradeConnection(u8 taskId);
 
+// NET_CONN_RETRY_TRADE_FUNC
+static void SetupRetryTradeTask();
+
 static void DoTransferDataBlock(u8 taskId);
 static void DoReceiveDataBlock(u8 taskId);
 
@@ -134,7 +137,8 @@ static void (* const sNetConnFunctions[])(void) =
     [NET_CONN_START_BATTLE_FUNC]  = SetupForDownloadBattleTask,
     [NET_CONN_START_MART_FUNC]    = SetupForOnlineMartTask,
     [NET_CONN_START_EGG_FUNC]     = SetupForGiftEggTask,
-    [NET_CONN_TRADE_FUNC]         = SetupForTradeTask
+    [NET_CONN_TRADE_FUNC]         = SetupForTradeTask,
+    [NET_CONN_RETRY_TRADE_FUNC]   = SetupRetryTradeTask
 };
 
 void CallNetworkFunction(void)
@@ -935,6 +939,12 @@ static void SetupForTradeTask()
     sSendRecvMgr.disableChecks     = FALSE;
     sSendRecvMgr.repeatedStepCount = 0;
     gSpecialVar_0x8003 = 0;
+}
+
+static void SetupRetryTradeTask()
+{
+    SetupForTradeTask();
+    sSendRecvMgr.nextProcessStep   = TRADE_TRANSMIT_REQUEST;
 }
 
 static void Task_TradeCancel(u8 taskId)
