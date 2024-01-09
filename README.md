@@ -62,7 +62,7 @@ There are 3 main components to this project:
 
 You can download a zip of the latest releas build here https://github.com/KittyPBoxx/pokeemerald-net-demo/releases/tag/v0.1.0
 
-## Quick Start *(I'm working on better instructions)*
+## Quick Start
 
 ### 1 - Get all the resources
 
@@ -77,11 +77,15 @@ On top of these you will need
 - Your Pokemon Emerald (U) backup rom
 - A GBA bios.bin file
 
+![](tutorial_1_files.png)
+
 ### 2 - Patching Emerald
 
 - Get your copy of Emerald (U). (md5sum 605b89b67018abcea91e693a4dd25be3) 
 - Get the netdemo.xdelta from the release zip
 - Use this site to patch your rom. https://www.marcrobledo.com/RomPatcher.js/
+
+![](tutorial_2_patching.png)
 
 ### 3 - Configure Dolphin 
 
@@ -95,7 +99,11 @@ Configure the following settings
   - Settings->Gamecube | the pokeemerald rom is loaded in same port as the integrated GBA controller you are using
   - If using an exsiting save the name is updated. i.e if your rom is pokeemerald.gba and you are in port 1 the save would be called 'pokeemerald-1.sav'
 
+![](tutorial_3_dolphin_setup.png)
+
 The easiest way to run the wii channel is just to drag and drop the 'pokecom-channel.dol' file into dolphin 
+
+![](tutorial_4_load_dol.png)
 
 ### 4 - Run the server
 
@@ -105,12 +113,16 @@ Once it is running you can go to the web ui by going to `localhost:8081` in your
 
 The game server runs at localhost:9000 so dolphin should automatically be able to connect if they are running on the same PC
 
+![](tutorial_5_server.png)
+
 ### 5 - Play the game
   
 * When the wii channel launches the integrated mgba should launch at the same time
 * If the wii channel does not detect the game automatically, left click the mgba window, reset the game, and it should be picked up
 * The player in the wii channel will show as "Waiting" untill you talk to the terminal at the Lilycove Network Center
 * If you are starting a new save, Norman will be waiting in Oldale to take you to Lilycove. Once there head to the North-Eastern building and speak to the terminal.
+
+![](tutorial_6_game.png)
 
 ## Dev Guide 
 
