@@ -52,6 +52,8 @@ There are two ways to get this project running:
 - WIFI Router or Wii ethernet adapter
 - A PC/Server that can run nodejs 
 
+⚠️ In v0.1.0 the Debug Version should be used when using real hardware. The graphical channel has know issues. ⚠️
+
 ## Software Components
 
 There are 3 main components to this project:
