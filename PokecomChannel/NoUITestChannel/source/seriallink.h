@@ -19,7 +19,7 @@
 #define SI_WRITE 0x15
 #define SI_RESET 0xFF
 
-#define SI_TRANS_DELAY 50 // Minimum delay between data transfers (any faster and data might be missed)
+#define SI_TRANS_DELAY 200 // Minimum delay between data transfers (any faster and data might be missed)
 
 #define MAX_CONNECTION_LOOPS 1000
 

@@ -1,4 +1,4 @@
-⚠️ This project has mostly been tested on dolphin, use on real hardware at your own risk.  ⚠️
+⚠️ This project has mostly been tested on dolphin, use on real hardware at your own risk. If running on real hardware you should use the (NoUIChannel) debug channel as there are known issues with the graphical channel on real hardware  ⚠️
 
 > This project is in development. While it should be functional this version is only intended for use by developers. Feel free to contribute. 
 

@@ -17,8 +17,6 @@
 #define WELCOME_REQUEST "WR_"
 #define SEND_PLAYER_DATA "PD_"
 
-#define SI_TRANS_DELAY 50 // Minimum delay between data transfers
-
 #define NET_CONN_HANDSHAKE_REQ 0xCAD0 // Sent by the gba to handshake
 #define NET_CONN_HANDSHAKE_RES_NO_INTERNET 0xCAD1 // Response to the gba if we have no internet
 #define NET_CONN_HANDSHAKE_RES_ONLINE 0xCAD2 // Response to the gba if we have internet
