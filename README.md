@@ -1,4 +1,4 @@
-⚠️ This project has mostly been tested on dolphin, use on real hardware at your own risk. If running on real hardware you should use the (NoUIChannel) debug channel as there are known issues with the graphical channel on real hardware  ⚠️
+⚠️ This project has mostly been tested on dolphin, use on real hardware at your own risk. ⚠️
 
 > This project is in development. While it should be functional this version is only intended for use by developers. Feel free to contribute. 
 
@@ -51,8 +51,6 @@ There are two ways to get this project running:
 - WII *(Not wii mini)* (https://en.wikipedia.org/wiki/Wii)
 - WIFI Router or Wii ethernet adapter
 - A PC/Server that can run nodejs 
-
-⚠️ In v0.1.0 the Debug Version should be used when using real hardware. The graphical channel has know issues. ⚠️
 
 ## Software Components
 
