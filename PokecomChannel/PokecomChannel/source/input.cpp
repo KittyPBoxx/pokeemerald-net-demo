@@ -32,7 +32,7 @@ static int rumbleCount[4] = {0,0,0,0};
 void UpdatePads()
 {
 	WPAD_ScanPads();
-	PAD_ScanPads();
+	//PAD_ScanPads();
 
 	for(int i=3; i >= 0; i--)
 	{
@@ -55,7 +55,7 @@ void UpdatePads()
  ***************************************************************************/
 void SetupPads()
 {
-	PAD_Init();
+	//PAD_Init();
 	WPAD_Init();
 
 	// read wiimote accelerometer and IR data

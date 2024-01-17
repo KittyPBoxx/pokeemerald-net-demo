@@ -53,6 +53,8 @@
 // Special Commands Recognised by the wii
 
 #define NET_CONN_LIFN_REQ 0x2005 // Return information about this devices network connection 
+// Result Value bytes 2005 XX YY IF XX = 0 means tcp connection still busy doing something YY is the state of the connector as seen on the next line)
+// CONNECTION_INIT = 0, CONNECTION_SUCCESS, CONNECTION_STARTING, CONNECTION_ERROR_INVALID_IP, CONNECTION_ERROR_COULD_NOT_RESOLVE_IPV4, CONNECTION_ERROR_NO_NETWORK_DEVICE, CONNECTION_ERROR_CONNECTION_FAILED, CONNECTION_ERROR_INVALID_RESPONSE
 
 #define NET_CONN_RECV_REQ 0x2500 // Tell wii to send us data from the buffer for this devices port | msg bytes 25 YY XX XX (X is the 16bit size of msg to receive, YY is the virtual channel)  
 #define NET_CONN_RCHF0_REQ 0x25F0  
@@ -95,7 +97,7 @@
 **/
 
 #define MAX_CONNECTION_LOOPS 20000
-#define MAX_CONNECTION_RETRIES 8
+#define MAX_CONNECTION_RETRIES 20
 #define RETRIES_LEFT_CANCEL -2
 
 #define R_JOYBUS  0xC000

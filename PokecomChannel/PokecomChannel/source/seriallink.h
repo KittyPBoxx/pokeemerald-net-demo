@@ -19,7 +19,7 @@
 #define SI_WRITE 0x15
 #define SI_RESET 0xFF
 
-#define SI_TRANS_DELAY 50 // Minimum delay between data transfers (any faster and data might be missed)
+#define SI_TRANS_DELAY 160 // Minimum delay between data transfers (any faster and data might be missed)
 
 #define MAX_MSG_SIZE 4096
 
@@ -27,10 +27,10 @@
 
 #define MAX_CONNECTION_LOOPS 1000
 
-volatile u32 ch0DeviceType = 0;
-volatile u32 ch1DeviceType = 0;
-volatile u32 ch2DeviceType = 0;
-volatile u32 ch3DeviceType = 0;
+u32 ch0DeviceType = 0;
+u32 ch1DeviceType = 0;
+u32 ch2DeviceType = 0;
+u32 ch3DeviceType = 0;
 
 static void ch0TypeCallback(s32 res, u32 val)
 {

@@ -10,11 +10,9 @@
 #define _MENU_H_
 
 #include <ogcsys.h>
-#include "logger.h"
-#include "linkcableclient.h"
 
 void InitGUIThreads();
-void MainMenu (int menuitem, Logger * LOGGER, LinkCableClient * gbas[4]);
+void MainMenu();
 
 enum
 {

@@ -11,7 +11,7 @@
 
 #include <ogcsys.h>
 
-void InitVideo ();
+void InitVideo (bool useConsole);
 void StopGX();
 void ResetVideo_Menu();
 void Menu_Render();

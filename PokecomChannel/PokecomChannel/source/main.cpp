@@ -24,13 +24,13 @@
 #include "filelist.h"
 #include "main.h"
 #include "gettext.h"
-#include "linkcableclient.h"
-#include "logger.h"
+
+extern "C" {
+	#include "linkcableclient.h"
+}
 
 #define USE_UI TRUE
 
-static LinkCableClient * gbas[4];
-static Logger * LOGGER = nullptr;
 int ExitRequested = 0;
 
 void ExitApp()
@@ -40,48 +40,38 @@ void ExitApp()
 	exit(0);
 }
 
-void setupGBAConnector(int port, Logger * LOGGER)
-{
-	gbas[port] = new LinkCableClient(port, LOGGER);
-	gbas[port]->Start();
-}
-
 int main(int argc, char *argv[])
 {
 	(void)argc;
 	(void)argv;
 
-	InitVideo(); // Initialize video
-	SetupPads(); // Initialize input
+	InitVideo(USE_UI); // Initialize video
 	InitAudio(); // Initialize audio
 	InitFreeType((u8*)font_ttf, font_ttf_size); // Initialize font system
 	InitGUIThreads(); // Initialize GUI
 	LoadLanguage(); // Load localised text
 
-	LOGGER = new Logger();
+	PAD_Init();
 
-	setupGBAConnector(0, LOGGER);
-	setupGBAConnector(1, LOGGER);
-	setupGBAConnector(2, LOGGER);
-	setupGBAConnector(3, LOGGER);
+	setupGBAConnectors();
 
 	if (USE_UI)
 	{
-		MainMenu(MENU_SETTINGS, LOGGER, gbas);
+		MainMenu();
 	}
 	else
 	{
 		printf ("Starting Pokecom Channel\n");
-
-		while(1) {
-
+		while(1)
+		{
 			VIDEO_WaitVSync();
 			WPAD_ScanPads();
 
 			int buttonsDown = WPAD_ButtonsDown(0);
 
-			if (buttonsDown & WPAD_BUTTON_HOME) {
-				exit(0);
+			if (buttonsDown & WPAD_BUTTON_HOME) 
+			{
+				ExitApp();
 			}
 		}
 	}

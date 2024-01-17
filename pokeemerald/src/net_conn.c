@@ -539,7 +539,7 @@ static void Task_LinkupProcess(u8 taskId)
         case LINKUP_HANDLE_NETWORK_STATUS_OUTCOME:
             if (!(NET_CONN_LIFN_REQ >> 8 == gStringVar3[0] && (NET_CONN_LIFN_REQ & 0x00FF) == gStringVar3[1]))
             {
-                sSendRecvMgr.nextProcessStep = LINKUP_REQUEST_NETWORK_STATUS;
+                sSendRecvMgr.nextProcessStep = LINKUP_WAIT_FOR_SERVER_TO_CONNECT;
             }
             else if (gStringVar3[3] >= NETWORK_MIN_ERROR)
             {
@@ -931,7 +931,7 @@ enum {
 static void SetupForTradeTask()
 {
     sSendRecvMgr.allowCancel       = TRUE;
-    sSendRecvMgr.retriesLeft       = MAX_CONNECTION_RETRIES + 20;
+    sSendRecvMgr.retriesLeft       = MAX_CONNECTION_RETRIES + 20; // because when the connection is dodgy these fail way to much
     sSendRecvMgr.onFinish          = Task_EndTradeConnection;
     sSendRecvMgr.onCancel          = Task_TradeCancel;
     sSendRecvMgr.onProcess         = Task_TradeProcess;
@@ -1022,6 +1022,7 @@ static void Task_TradeProcess(u8 taskId)
             {
                 CpuFill32(0, &gEnemyParty, sizeof(gEnemyParty));     
                 sSendRecvMgr.retryPoint = TRADE_RECEIVE_FULL_DATA;
+                sSendRecvMgr.retriesLeft = MAX_CONNECTION_RETRIES + 20;
             }
             configureSendRecvMgrChunked(NET_CONN_RCHF1_REQ, (vu32 *) &gEnemyParty[0], sizeof(struct Pokemon), NET_CONN_STATE_RECEIVE, TRADE_FINISH, MINIMUM_CHUNK_SIZE);
             break;
@@ -1038,9 +1039,18 @@ static void Task_TradeProcess(u8 taskId)
                     gSpecialVar_0x8003 = 2;
                     gStringVar3[PLAYER_NAME_LENGTH + 1] = 0xFF;
                     gSpecialVar_0x8004 = 100; // This makes the in game trade use special values for name
+                    sSendRecvMgr.state = NET_CONN_STATE_DONE;
+                }
+                else
+                {
+                    sSendRecvMgr.allowCancel = TRUE;
+                    sSendRecvMgr.state = TRADE_WAIT_SHORT_FOR_SERVER;
                 }
             }
-            sSendRecvMgr.state = NET_CONN_STATE_DONE;
+            else
+            {
+                sSendRecvMgr.state = NET_CONN_STATE_DONE;
+            }
             break;
         }
     }

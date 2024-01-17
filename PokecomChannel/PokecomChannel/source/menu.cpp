@@ -19,11 +19,14 @@
 #include "menu.h"
 #include "main.h"
 #include "input.h"
-#include "tcpclient.h"
 #include "gettext.h"
-#include "linkcableclient.h"
 
-#define THREAD_SLEEP 10
+extern "C" {
+	#include "linkcableclient.h"
+	#include "uilogger.h"
+}
+
+#define THREAD_SLEEP 10000
 
 static GuiImageData * pointer[4];
 static GuiImage * bgImg = nullptr;
@@ -36,14 +39,8 @@ char ipv4[32] = "127.0.0.1:9000";
 char serverName[32] = "\0";
 bool serverSet = false;
 
-bool isP1Connected = false;
-bool isP2Connected = false;
-bool isP3Connected = false;
-bool isP4Connected = false;
-bool isP1Named = false;
-bool isP2Named = false;
-bool isP3Named = false;
-bool isP4Named = false;
+bool isPlayerConnected[4] = {false, false, false, false};
+bool isPlayerNamed[4] = {false, false, false, false};
 
 /****************************************************************************
  * ResumeGui
@@ -75,19 +72,16 @@ static void HaltGui()
 		usleep(THREAD_SLEEP);
 }
 
-static const char * resolveNetworkMessage(u8 state, TCPClient* client)
+static const char * resolveNetworkMessage(u8 state)
 {
 	switch(state)
 	{
 		case CONNECTION_SUCCESS: 
 		{
-			int bufferSize = strlen(gettext("networkTest.CONNECTION_SUCCESS")) + strlen(client->GetServerName()) + 1;
+			int bufferSize = strlen(gettext("networkTest.CONNECTION_SUCCESS")) + strlen(getServerName()) + 1;
 			char* concatString = new char[ bufferSize ];
 			strcpy( concatString, gettext("networkTest.CONNECTION_SUCCESS") );
-			strcat( concatString, client->GetServerName());
-
-			strcpy(serverName, client->GetServerName());
-			serverSet = true;
+			strcat( concatString, getServerName());
 			return concatString;
 		}
 		break;
@@ -104,16 +98,10 @@ static const char * resolveNetworkMessage(u8 state, TCPClient* client)
 			return gettext("networkTest.CONNECTION_ERROR_CONNECTION_FAILED");
 		break;
 		case CONNECTION_ERROR_INVALID_RESPONSE: 
-		{
-			int bufferSize = strlen(gettext("networkTest.CONNECTION_ERROR_INVALID_RESPONSE")) + strlen(client->GetResponse()) + 1;
-			char* concatString = new char[ bufferSize ];
-			strcpy( concatString, gettext("networkTest.CONNECTION_ERROR_INVALID_RESPONSE") );
-			strcat( concatString, client->GetResponse());
 			return gettext("networkTest.CONNECTION_ERROR_INVALID_RESPONSE");
-		}
 		break;
-		case CONNECTION_READY: 
-			return gettext("networkTest.CONNECTION_READY");
+		case CONNECTION_STARTING: 
+			return gettext("networkTest.CONNECTION_STARTING");
 		case CONNECTION_INIT:	
 		default:
 			return gettext("networkTest.CONNECTION_INIT");
@@ -125,7 +113,7 @@ static const char * resolveNetworkMessage(u8 state, TCPClient* client)
  *
  * Displays a window to the user while trying to connect to the network
  ***************************************************************************/
-int NetworkTestPopup(const char *title, const char *msg, const char *btn1Label, GuiSound* bgMusic, LinkCableClient * gbas[4])
+int NetworkTestPopup(const char *title, const char *msg, const char *btn1Label, GuiSound* bgMusic)
 {
 	int choice = -1;
 
@@ -196,13 +184,12 @@ int NetworkTestPopup(const char *title, const char *msg, const char *btn1Label, 
 	mainWindow->ChangeFocus(&promptWindow);
 	ResumeGui();
 
-	TCPClient* client = new TCPClient();
-	client->TestConnection(ipv4);
+	u32 connectionTestResult = testTCPConnection(ipv4);
 
 	GuiSound connectingSound(connecting_pcm, connecting_pcm_size, SOUND::PCM);
 	connectingSound.Play();
 
-	u8 lastConnectionState = CONNECTION_READY;
+	u32 isStarting = 1;
 	u8 connectionRetries = 0;
 
 	// Make sure a minimum amount of refreshes has always happened before we display a result
@@ -213,57 +200,46 @@ int NetworkTestPopup(const char *title, const char *msg, const char *btn1Label, 
 		usleep(THREAD_SLEEP);
 		bgMusic->Loop();
 
-		if (lastConnectionState == CONNECTION_READY)
+		if (isStarting)
 		{
 			connectingSound.Loop();
 		}
 
 		if(btn1.GetState() == STATE::CLICKED)
 		{
-			client->Disconnect();
 			choice = 1;
 		}
-		else if (updatesBeforeResult > 200000)
+		else if (updatesBeforeResult > 300)
 		{
 
-			if ((client->GetConnectionResult() > CONNECTION_ERROR_INVALID_RESPONSE) && connectionRetries < 3)
+			if ((connectionTestResult >= CONNECTION_ERROR_INVALID_RESPONSE) && connectionRetries < 10)
 			{
 				updatesBeforeResult = 0;
-				lastConnectionState = CONNECTION_READY;
+				isStarting = 1;
 				connectionRetries++;
-				client = new TCPClient();
-				client->TestConnection(ipv4);
+				connectionTestResult = testTCPConnection(ipv4);
 			} 
-			else if (lastConnectionState != client->GetConnectionResult())
+			else
 			{
-				lastConnectionState = client->GetConnectionResult();
-
-				if (lastConnectionState == CONNECTION_SUCCESS)
+				if (connectionTestResult == CONNECTION_SUCCESS)
 				{
 					GuiSound connectingSuccessSound(success_pcm, success_pcm_size, SOUND::PCM);
 					connectingSuccessSound.SetVolume(20);
 					connectingSuccessSound.Play();
 					infoTxt.SetVisible(true);
-
-					strcpy(gbas[0]->connector.overrideAddress, ipv4);
-					strcpy(gbas[1]->connector.overrideAddress, ipv4);
-					strcpy(gbas[2]->connector.overrideAddress, ipv4);
-					strcpy(gbas[3]->connector.overrideAddress, ipv4);
+					setOverrideAddress(ipv4);
 				}
-				else if (lastConnectionState != CONNECTION_READY)
+				else
 				{
 					GuiSound connectingErrorSound(fail_pcm, fail_pcm_size, SOUND::PCM);
 					connectingErrorSound.SetVolume(20);
 					connectingErrorSound.Play();
 				}
 
-				if (lastConnectionState != CONNECTION_READY)
-				{
-					connectingSound.Stop();
-					loader.SetVisible(false);
-				}
-
-				msgTxt.SetText(resolveNetworkMessage(lastConnectionState, client));
+				isStarting = 0;
+				connectingSound.Stop();
+				loader.SetVisible(false);
+				msgTxt.SetText(resolveNetworkMessage(connectionTestResult));
 			} 
 		} 
 		else 
@@ -459,19 +435,125 @@ static void *UpdateGUI (void *arg)
 }
 
 /****************************************************************************
+ * DebugMenu
+ ***************************************************************************/
+static int DebugMenu(GuiSound* bgMusic)
+{
+	int menu = MENU_NONE;
+
+	GuiText titleTxt(gettext("debug.title"), 24, (GXColor){255, 255, 255, 255});
+	titleTxt.SetAlignment(ALIGN_H::LEFT, ALIGN_V::TOP);
+	titleTxt.SetPosition(50,50);
+	titleTxt.SetEffect(EFFECT::SLIDE_TOP | EFFECT::SLIDE_IN, 25);
+
+	GuiSound btnSoundOver(button_over_pcm, button_over_pcm_size, SOUND::PCM);
+	btnSoundOver.SetVolume(20);
+	GuiImageData btnOutline(button_png);
+	GuiImageData btnOutlineOver(button_over_png);
+	GuiImageData btnLongOutline(button_long_png);
+	GuiImageData btnLongOutlineOver(button_long_over_png);
+
+	GuiSound btnClick(swish_pcm, swish_pcm_size, SOUND::PCM);
+	btnClick.SetVolume(40);
+
+	GuiTrigger trigA;
+	trigA.SetSimpleTrigger(-1, WPAD_BUTTON_A | WPAD_CLASSIC_BUTTON_A, PAD_BUTTON_A);
+
+	GuiText logs[MAX_LOGS] = {
+		GuiText("", 16, (GXColor){200, 200, 0, 255}),
+		GuiText("", 16, (GXColor){200, 200, 0, 255}),
+		GuiText("", 16, (GXColor){200, 200, 0, 255}),
+		GuiText("", 16, (GXColor){200, 200, 0, 255}),
+		GuiText("", 16, (GXColor){200, 200, 0, 255}),
+		GuiText("", 16, (GXColor){200, 200, 0, 255}),
+		GuiText("", 16, (GXColor){200, 200, 0, 255}),
+		GuiText("", 16, (GXColor){200, 200, 0, 255}),
+		GuiText("", 16, (GXColor){200, 200, 0, 255}),
+		GuiText("", 16, (GXColor){200, 200, 0, 255}),
+		GuiText("", 16, (GXColor){200, 200, 0, 255}),
+		GuiText("", 16, (GXColor){200, 200, 0, 255}),
+		GuiText("", 16, (GXColor){200, 200, 0, 255}),
+		GuiText("", 16, (GXColor){200, 200, 0, 255})
+	};
+
+	for (int i = 0; i < MAX_LOGS; i++)
+	{
+		logs[i].SetText(read_ui_log(i));
+		logs[i].SetAlignment(ALIGN_H::LEFT, ALIGN_V::TOP);
+		logs[i].SetPosition(50,100 + (20 * i));
+	}
+
+	GuiText backBtnTxt(gettext("debug.back"), 22, (GXColor){0, 0, 0, 255});
+	GuiImage backBtnImg(&btnOutline);
+	GuiImage backBtnImgOver(&btnOutlineOver);
+	GuiButton backBtn(btnOutline.GetWidth(), btnOutline.GetHeight());
+	backBtn.SetAlignment(ALIGN_H::LEFT, ALIGN_V::BOTTOM);
+	backBtn.SetPosition(50, -35);
+	backBtn.SetLabel(&backBtnTxt);
+	backBtn.SetImage(&backBtnImg);
+	backBtn.SetImageOver(&backBtnImgOver);
+	backBtn.SetSoundOver(&btnSoundOver);
+	backBtn.SetSoundClick(&btnClick);
+	backBtn.SetTrigger(&trigA);
+	backBtn.SetEffectGrow();
+
+	HaltGui();
+	GuiWindow w(screenwidth, screenheight);
+	for (int i = 0; i < MAX_LOGS; i++)
+	{
+		w.Append(&logs[i]);
+	}
+	w.Append(&backBtn);
+	mainWindow->Append(&w);
+	mainWindow->Append(&titleTxt);
+	ResumeGui();
+
+	while(menu == MENU_NONE)
+	{
+		usleep(THREAD_SLEEP);
+
+		for (int i = 0; i < MAX_LOGS; i++)
+		{
+			logs[i].SetText(read_ui_log(i));
+		}
+
+		if(backBtn.GetState() == STATE::CLICKED)
+		{
+			menu = MENU_SETTINGS;
+		}
+		if (WPAD_ButtonsDown(0) & WPAD_BUTTON_MINUS) {
+			menu = MENU_SETTINGS;
+		}
+
+		bgMusic->Loop();
+	}
+	HaltGui();
+
+	for (int i = 0; i < MAX_LOGS; i++)
+	{
+		logs[i].SetText("");
+	}
+
+	mainWindow->Remove(&w);
+	mainWindow->Remove(&titleTxt);
+	return menu;
+}
+
+
+/****************************************************************************
  * InitGUIThread
  *
  * Startup GUI threads
  ***************************************************************************/
 void InitGUIThreads()
 {
-	LWP_CreateThread (&guithread, UpdateGUI, nullptr, nullptr, 0, 70);
+	LWP_CreateThread (&guithread, UpdateGUI, nullptr, nullptr, 0, 20);
 }
 
 /****************************************************************************
  * MenuSettings
  ***************************************************************************/
-static int MenuSettings(GuiSound* bgMusic, LinkCableClient * gbas[4])
+static int MenuSettings(GuiSound* bgMusic)
 {
 	int menu = MENU_NONE;
 
@@ -534,14 +616,15 @@ static int MenuSettings(GuiSound* bgMusic, LinkCableClient * gbas[4])
 	exitBtn.SetTrigger(&trigHome);
 	exitBtn.SetEffectGrow();
 
-	isP1Connected = false;
-	isP2Connected = false;
-	isP3Connected = false;
-	isP4Connected = false;
-	isP1Named = false;
-	isP2Named = false;
-	isP3Named = false;
-	isP4Named = false;
+	isPlayerConnected[0] = false;
+	isPlayerConnected[1] = false;
+	isPlayerConnected[2] = false;
+	isPlayerConnected[3] = false;
+
+	isPlayerNamed[0] = false;
+	isPlayerNamed[1] = false;
+	isPlayerNamed[2] = false;
+	isPlayerNamed[3] = false;
 
 	HaltGui();
 	GuiWindow w(screenwidth, screenheight);
@@ -556,12 +639,22 @@ static int MenuSettings(GuiSound* bgMusic, LinkCableClient * gbas[4])
 	w.Append(&exitBtn);
 
 	mainWindow->Append(&w);
+
+	/* Force inital redraw all on load then we loop */
+	connections.Draw();
+	bgImg->ApplyBackgroundPattern();
+
 	ResumeGui();
-
-
 
 	int soundFadeLoop = 0;	
 	bool isMuted = bgMusic->GetVolume() == 0;
+
+	/*
+	* On real hardware images with alpha seem to start gliching over time (espessially when changing screens)
+	* to fix this we periodically redraw the background, forcing all areas to be redrawn without corruption  
+	*/
+	int forceUiRefreshLoop = 0;
+
 
 	while(menu == MENU_NONE)
 	{
@@ -590,103 +683,33 @@ static int MenuSettings(GuiSound* bgMusic, LinkCableClient * gbas[4])
 
 		/* Handle GBA connections in the ui */
 
-		if (!isP1Connected && gbas[0]->GetConnectionResult() > 0)
+		for (int i = 0; i < 4; i++)
 		{
-			connections.ConnectPlayer(1);
-			isP1Connected = true;
-		} 
-		else if (isP1Connected && !isP1Named && gbas[0]->HasPlayerName())
-		{
-			connections.SetPlayerName(1, gbas[0]->GetPlayerName());
-			isP1Named = true;
+			if (!isPlayerConnected[i] && isConnected(i) > 0)
+			{
+				connections.ConnectPlayer(i + 1);
+				isPlayerConnected[i] = true;
+			} 
+
+			if (isPlayerConnected[i] && !isPlayerNamed[i] && hasPlayerName(i))
+			{
+				connections.SetPlayerName(i + 1, getPlayerName(i));
+				isPlayerNamed[i] = true;
+			}
 		}
 
-		if (!isP2Connected && gbas[1]->GetConnectionResult() > 0)
-		{
-			connections.ConnectPlayer(2);
-			isP2Connected = true;
-		}
-		else if (isP2Connected && !isP2Named && gbas[1]->HasPlayerName())
-		{
-			connections.SetPlayerName(2, gbas[1]->GetPlayerName());
-			isP2Named = true;
-		}
-
-		if (!isP3Connected && gbas[2]->GetConnectionResult() > 0)
-		{
-			connections.ConnectPlayer(3);
-			isP3Connected = true;
-		}		
-		else if (isP3Connected && !isP3Named && gbas[2]->HasPlayerName())
-		{
-			connections.SetPlayerName(3, gbas[2]->GetPlayerName());
-			isP3Named = true;
-		}
-
-
-		if (!isP4Connected && gbas[3]->GetConnectionResult() > 0)
-		{
-			connections.ConnectPlayer(4);
-			isP4Connected = true;
-		}
-		else if (isP4Connected && !isP4Named && gbas[3]->HasPlayerName())
-		{
-			connections.SetPlayerName(4, gbas[3]->GetPlayerName());
-			isP4Named = true;
-		}
-
-		
 		if (!serverSet)
 		{
-			if (isP1Named)
+			if (hasServerName())
 			{
-				if (gbas[0]->HasServerName())
-				{
-					strcpy(serverName, gbas[0]->GetServerName());
-					connections.SetServerName(serverName);
-					serverSet = true;
-				}
-			} 
-		}
-		if (!serverSet)
-		{
-			if (isP2Named)
-			{
-				if (gbas[1]->HasServerName())
-				{
-					strcpy(serverName, gbas[1]->GetServerName());
-					connections.SetServerName(serverName);
-					serverSet = true;
-				}
-			} 
-		}
-		if (!serverSet)
-		{
-			if (isP3Named)
-			{
-				if (gbas[2]->HasServerName())
-				{
-					strcpy(serverName, gbas[2]->GetServerName());
-					connections.SetServerName(serverName);
-					serverSet = true;
-				}
-			} 
-		}
-		if (!serverSet)
-		{
-			if (isP4Named)
-			{
-				if (gbas[0]->HasServerName())
-				{
-					strcpy(serverName, gbas[0]->GetServerName());
-					connections.SetServerName(serverName);
-					serverSet = true;
-				}
-			} 
+				strcpy(serverName, getServerName());
+				connections.SetServerName(serverName);
+				serverSet = true;
+			}
 		}
 
 		if (!isMuted && 
-		    (isP1Connected || isP2Connected || isP3Connected || isP4Connected) 
+		    (isPlayerConnected[0] || isPlayerConnected[1] || isPlayerConnected[2] || isPlayerConnected[3]) 
 			&& bgMusic->GetVolume() > 0)
 		{
 			if (soundFadeLoop % 100000 == 0)
@@ -704,6 +727,20 @@ static int MenuSettings(GuiSound* bgMusic, LinkCableClient * gbas[4])
 			isMuted = true;
 		}
 
+		if (forceUiRefreshLoop == 300)
+		{
+			forceUiRefreshLoop = 0;
+			HaltGui();
+			connections.Draw(); // Try and prevent the main ui going glitchy
+			bgImg->ApplyBackgroundPattern();
+			ResumeGui();
+		}
+		else
+		{
+			forceUiRefreshLoop++;
+		}
+
+
 	}
 
 	HaltGui();
@@ -716,7 +753,7 @@ static int MenuSettings(GuiSound* bgMusic, LinkCableClient * gbas[4])
  * NetworkConfigurationMenu
  ***************************************************************************/
 
-static int NetworkConfigurationMenu(GuiSound* bgMusic, LinkCableClient * gbas[4])
+static int NetworkConfigurationMenu(GuiSound* bgMusic)
 {
 	int menu = MENU_NONE;
 
@@ -798,8 +835,7 @@ static int NetworkConfigurationMenu(GuiSound* bgMusic, LinkCableClient * gbas[4]
 			NetworkTestPopup(gettext("networkTest.title"),
 				             gettext("networkTest.attemptingConnection"),
 				             gettext("networkTest.close"), 
-				             bgMusic,
-							 gbas);
+				             bgMusic);
 		}
 	}
 	HaltGui();
@@ -810,113 +846,13 @@ static int NetworkConfigurationMenu(GuiSound* bgMusic, LinkCableClient * gbas[4]
 	return menu;
 }
 
-/****************************************************************************
- * DebugMenu
- ***************************************************************************/
-static int DebugMenu(GuiSound* bgMusic, Logger * LOGGER)
-{
-	int menu = MENU_NONE;
-
-	GuiText titleTxt(gettext("debug.title"), 24, (GXColor){255, 255, 255, 255});
-	titleTxt.SetAlignment(ALIGN_H::LEFT, ALIGN_V::TOP);
-	titleTxt.SetPosition(50,50);
-	titleTxt.SetEffect(EFFECT::SLIDE_TOP | EFFECT::SLIDE_IN, 25);
-
-	GuiSound btnSoundOver(button_over_pcm, button_over_pcm_size, SOUND::PCM);
-	btnSoundOver.SetVolume(20);
-	GuiImageData btnOutline(button_png);
-	GuiImageData btnOutlineOver(button_over_png);
-	GuiImageData btnLongOutline(button_long_png);
-	GuiImageData btnLongOutlineOver(button_long_over_png);
-
-	GuiSound btnClick(swish_pcm, swish_pcm_size, SOUND::PCM);
-	btnClick.SetVolume(40);
-
-	GuiTrigger trigA;
-	trigA.SetSimpleTrigger(-1, WPAD_BUTTON_A | WPAD_CLASSIC_BUTTON_A, PAD_BUTTON_A);
-
-	GuiText logs[MAX_LOGS] = {
-		GuiText("", 16, (GXColor){200, 200, 0, 255}),
-		GuiText("", 16, (GXColor){200, 200, 0, 255}),
-		GuiText("", 16, (GXColor){200, 200, 0, 255}),
-		GuiText("", 16, (GXColor){200, 200, 0, 255}),
-		GuiText("", 16, (GXColor){200, 200, 0, 255}),
-		GuiText("", 16, (GXColor){200, 200, 0, 255}),
-		GuiText("", 16, (GXColor){200, 200, 0, 255}),
-		GuiText("", 16, (GXColor){200, 200, 0, 255}),
-		GuiText("", 16, (GXColor){200, 200, 0, 255}),
-		GuiText("", 16, (GXColor){200, 200, 0, 255}),
-		GuiText("", 16, (GXColor){200, 200, 0, 255}),
-		GuiText("", 16, (GXColor){200, 200, 0, 255}),
-		GuiText("", 16, (GXColor){200, 200, 0, 255}),
-		GuiText("", 16, (GXColor){200, 200, 0, 255})
-	};
-
-	for (int i = 0; i < MAX_LOGS; i++)
-	{
-		logs[i].SetText(LOGGER->GetMsgs(i));
-		logs[i].SetAlignment(ALIGN_H::LEFT, ALIGN_V::TOP);
-		logs[i].SetPosition(50,100 + (20 * i));
-	}
-
-	GuiText backBtnTxt(gettext("debug.back"), 22, (GXColor){0, 0, 0, 255});
-	GuiImage backBtnImg(&btnOutline);
-	GuiImage backBtnImgOver(&btnOutlineOver);
-	GuiButton backBtn(btnOutline.GetWidth(), btnOutline.GetHeight());
-	backBtn.SetAlignment(ALIGN_H::LEFT, ALIGN_V::BOTTOM);
-	backBtn.SetPosition(50, -35);
-	backBtn.SetLabel(&backBtnTxt);
-	backBtn.SetImage(&backBtnImg);
-	backBtn.SetImageOver(&backBtnImgOver);
-	backBtn.SetSoundOver(&btnSoundOver);
-	backBtn.SetSoundClick(&btnClick);
-	backBtn.SetTrigger(&trigA);
-	backBtn.SetEffectGrow();
-
-	HaltGui();
-	GuiWindow w(screenwidth, screenheight);
-	for (int i = 0; i < MAX_LOGS; i++)
-	{
-		w.Append(&logs[i]);
-	}
-	w.Append(&backBtn);
-	mainWindow->Append(&w);
-	mainWindow->Append(&titleTxt);
-	ResumeGui();
-
-	while(menu == MENU_NONE)
-	{
-		usleep(THREAD_SLEEP);
-
-		for (int i = 0; i < MAX_LOGS; i++)
-		{
-			logs[i].SetText(LOGGER->GetMsgs(i));
-		}
-
-		if(backBtn.GetState() == STATE::CLICKED)
-		{
-			menu = MENU_SETTINGS;
-		}
-		if (WPAD_ButtonsDown(0) & WPAD_BUTTON_MINUS) {
-			menu = MENU_SETTINGS;
-		}
-
-		bgMusic->Loop();
-	}
-	HaltGui();
-
-	mainWindow->Remove(&w);
-	mainWindow->Remove(&titleTxt);
-	return menu;
-}
-
 
 /****************************************************************************
  * MainMenu
  ***************************************************************************/
-void MainMenu(int menu, Logger * LOGGER, LinkCableClient * gbas[4])
+void MainMenu()
 {
-	int currentMenu = menu;
+	int currentMenu = MENU_SETTINGS;
 
 	#ifdef HW_RVL
 	pointer[0] = new GuiImageData(player1_point_png);
@@ -943,16 +879,16 @@ void MainMenu(int menu, Logger * LOGGER, LinkCableClient * gbas[4])
 		switch (currentMenu)
 		{
 			case MENU_SETTINGS:
-				currentMenu = MenuSettings(bgMusic, gbas);
+				currentMenu = MenuSettings(bgMusic);
 				break;
 			case MENU_SETTINGS_NETWORK:
-				currentMenu = NetworkConfigurationMenu(bgMusic, gbas);
+				currentMenu = NetworkConfigurationMenu(bgMusic);
 				break;
 			case MENU_DEBUG:
-				currentMenu = DebugMenu(bgMusic, LOGGER);
+				currentMenu = DebugMenu(bgMusic);
 				break;
 			default: // unrecognized menu
-				currentMenu = MenuSettings(bgMusic, gbas);
+				currentMenu = MenuSettings(bgMusic);
 				break;
 		}
 	}

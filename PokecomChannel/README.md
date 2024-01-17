@@ -54,9 +54,7 @@ If you have issues see the troubleshooting step***
 
 ## Debugging
 
-On the wii channel main screen you can press `minus` for some debug info. Theres a `Logger` class with an instance shared between all the `LinkCableClient`'s that you can use to log more values to the debug screen. 
-
-If you want to debug on a simpler version that prints info to the screen you can use the "no UI" channel. This channel has fewer features and only supports 1 gba in port 1. 
+A debug version of the channel is available that prints out messages to the screen. Alternatively you can compile the UI channel with `#define USE_UI TRUE` set to false in `main.cpp` and `#define ENABLE_DEBUG_LOG` commented out in `linkcableclient.c`
 
 ## Resolving Addresses
 

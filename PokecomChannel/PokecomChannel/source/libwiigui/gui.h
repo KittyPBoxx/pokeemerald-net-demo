@@ -158,8 +158,6 @@ typedef struct _gamepaddata {
 #include "gui_button.h"
 #include "gui_keyboard.h"
 #include "gui_numpad.h"
-#include "gui_optionbrowser.h"
-#include "gui_filebrowser.h"
 #include "gui_loader.h"
 #include "gui_gbaconnections.h"
 
