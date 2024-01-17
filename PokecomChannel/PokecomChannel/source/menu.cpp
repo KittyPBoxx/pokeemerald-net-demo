@@ -727,7 +727,7 @@ static int MenuSettings(GuiSound* bgMusic)
 			isMuted = true;
 		}
 
-		if (forceUiRefreshLoop == 300)
+		if (forceUiRefreshLoop == 1000)
 		{
 			forceUiRefreshLoop = 0;
 			HaltGui();

@@ -54,7 +54,9 @@ If you have issues see the troubleshooting step***
 
 ## Debugging
 
-A debug version of the channel is available that prints out messages to the screen. Alternatively you can compile the UI channel with `#define USE_UI TRUE` set to false in `main.cpp` and `#define ENABLE_DEBUG_LOG` commented out in `linkcableclient.c`
+On the wii channel main screen you can press `minus` for some debug info.
+
+A debug version of the channel is available that prints out messages to the screen. Alternatively you can compile the UI channel with `#define USE_UI TRUE` set to false in `main.cpp`
 
 ## Resolving Addresses
 

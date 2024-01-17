@@ -2,7 +2,7 @@
 <app version="1">
   <name>Pokecom Channel - Debug</name>
   <coder>KittyPBoxx</coder>
-  <version>0.1.0</version>
+  <version>0.1.1</version>
   <release_date>20240112135633</release_date>
   <short_description>Pokecom Channel - Debug</short_description> 
   <long_description>Pokecom Channel is a wii channel designed to give gen 3 games a network connection.

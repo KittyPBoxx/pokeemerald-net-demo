@@ -19,13 +19,21 @@
 #define SI_WRITE 0x15
 #define SI_RESET 0xFF
 
-#define SI_TRANS_DELAY 160 // Minimum delay between data transfers (any faster and data might be missed)
+#define SI_TRANS_DELAY_FAST 50 // Minimum delay between data transfers (any faster and data might be missed)
+#define SI_TRANS_DELAY_SLOW 160 
+
+u32 transDelay = SI_TRANS_DELAY_FAST;
 
 #define MAX_MSG_SIZE 4096
 
 #define VIRTUAL_CHANNEL_SIZE 16
 
 #define MAX_CONNECTION_LOOPS 1000
+
+static void switchToSlowTransfer()
+{
+    transDelay = SI_TRANS_DELAY_SLOW;
+}
 
 u32 ch0DeviceType = 0;
 u32 ch1DeviceType = 0;
@@ -209,7 +217,7 @@ static int SL_recv(u8 channel, u8 pktIn[4])
                 pktIn,                                       // In buffer
                 4,                                           // In msg length
                 SL_getTransmissionFinishedCallback(channel), // transfer finished callback
-                SI_TRANS_DELAY);                             // Delay between transfers 
+                transDelay);                                 // Delay between transfers 
 
     for (int i = 0; SL_isTransmissionFinished(channel) == 0; i++)
     {
@@ -217,7 +225,7 @@ static int SL_recv(u8 channel, u8 pktIn[4])
         {
             return -1;
         }
-        usleep(SI_TRANS_DELAY);
+        usleep(transDelay);
     }
     return 0;
 }
@@ -241,7 +249,7 @@ static int SL_send(u8 channel, u32 msg)
                 pktIn,
                 1,
                 SL_getTransmissionFinishedCallback(channel),
-                SI_TRANS_DELAY);
+                transDelay);
 
 	for (int i = 0; SL_isTransmissionFinished(channel) == 0; i++)
     {
@@ -249,7 +257,7 @@ static int SL_send(u8 channel, u32 msg)
         {
             return -1;
         }
-        usleep(SI_TRANS_DELAY);
+        usleep(transDelay);
     }
     return 0;
 }
@@ -268,7 +276,7 @@ static int SL_reset(u8 channel)
                 pktIn,
                 4,
                 SL_getTransmissionFinishedCallback(channel),
-                SI_TRANS_DELAY);
+                transDelay);
 
 	for (int i = 0; SL_isTransmissionFinished(channel) == 0; i++)
     {
@@ -276,7 +284,7 @@ static int SL_reset(u8 channel)
         {
             return -1;
         }
-        usleep(SI_TRANS_DELAY);
+        usleep(transDelay);
     }
     return 0;
 }
@@ -293,7 +301,7 @@ static int SL_getstatus(u8 channel, u8 pktIn[4])
                 pktIn,
                 4,
                 SL_getTransmissionFinishedCallback(channel),
-                SI_TRANS_DELAY); 
+                transDelay); 
 
 	for (int i = 0; SL_isTransmissionFinished(channel) == 0; i++)
     {
@@ -301,7 +309,7 @@ static int SL_getstatus(u8 channel, u8 pktIn[4])
         {
             return -1;
         }
-        usleep(SI_TRANS_DELAY);
+        usleep(transDelay);
     }
     return 0;
 }

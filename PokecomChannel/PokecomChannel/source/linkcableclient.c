@@ -359,7 +359,7 @@ void setupGBAConnectors()
 			         (void *) port0,		        /* arg pointer for thread */
 			         NULL,			                /* stack base */
 			         16*1024,		                /* stack size */
-			         200          			        /* thread priority */ );
+			         250          			        /* thread priority */ );
 
 				
 	u8 *port1 = malloc(sizeof(*port1));
@@ -369,7 +369,7 @@ void setupGBAConnectors()
 			         (void *) port1,		        /* arg pointer for thread */
 			         NULL,			                /* stack base */
 			         16*1024,		                /* stack size */
-			         200          			        /* thread priority */ );
+			         240          			        /* thread priority */ );
 
 	u8 *port2 = malloc(sizeof(*port2));
 	*port2 = 2;
@@ -378,7 +378,7 @@ void setupGBAConnectors()
 			         (void *) port2,		        /* arg pointer for thread */
 			         NULL,			                /* stack base */
 			         16*1024,		                /* stack size */
-			         200          			        /* thread priority */ );
+			         230          			        /* thread priority */ );
 
 	u8 *port3 = malloc(sizeof(*port3));
 	*port3 = 3;
@@ -387,7 +387,7 @@ void setupGBAConnectors()
 			         (void *) port3,		        /* arg pointer for thread */
 			         NULL,			                /* stack base */
 			         16*1024,		                /* stack size */
-			         200          			        /* thread priority */ );
+			         220          			        /* thread priority */ );
 
 }
 
@@ -761,6 +761,7 @@ static void *seriald (void * port)
             {
 			  print_ui_log("SERIAL ERROR");
 			  LOG_NS("Connection Error Resetting...\n");
+			  switchToSlowTransfer();
 			  connector.requestSend = 0;
 			  connector.requestReceive = 0;
 			  connector.requestStop = 0;
