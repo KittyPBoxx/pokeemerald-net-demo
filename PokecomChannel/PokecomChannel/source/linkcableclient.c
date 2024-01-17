@@ -99,6 +99,22 @@
 
 #define SERVER_NAME_SIZE 32
 
+/*
+* Honestly, I give up... trying to get get a good speed on a real wii with a ton of latency and dolphin with no latency 
+* is impossible. So we just detect if they are running dolphin and prevent the slow down fallback option.
+*/
+#define SPR_ECID_U        924
+#define __stringify_1(x)        #x
+#define __stringify(x)          __stringify_1(x)
+
+#define mfspr(rn)       ({unsigned long rval; \
+                    asm volatile("mfspr %0," __stringify(rn) \
+                            : "=r" (rval)); rval; })
+bool IsDolphin(void)
+{        
+    return (mfspr(SPR_ECID_U) == 0x0d96e200);
+}
+
 // ======================= GBA LINK STUFF ======================================================
 
 enum {
@@ -761,7 +777,10 @@ static void *seriald (void * port)
             {
 			  print_ui_log("SERIAL ERROR");
 			  LOG_NS("Connection Error Resetting...\n");
-			  switchToSlowTransfer();
+
+			  if (!IsDolphin())
+				switchToSlowTransfer();
+
 			  connector.requestSend = 0;
 			  connector.requestReceive = 0;
 			  connector.requestStop = 0;
