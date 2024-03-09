@@ -118,7 +118,7 @@ The game server runs at localhost:9000 so dolphin should automatically be able t
 ### 5 - Play the game
   
 * When the wii channel launches the integrated mgba should launch at the same time
-* If the wii channel does not detect the game automatically, left click the mgba window, reset the game, and it should be picked up
+* If the wii channel does not detect the game automatically, right click the mgba window on the game screen, reset the game, and it should be picked up
 * The player in the wii channel will show as "Waiting" untill you talk to the terminal at the Lilycove Network Center
 * If you are starting a new save, Norman will be waiting in Oldale to take you to Lilycove. Once there head to the North-Eastern building and speak to the terminal.
 
