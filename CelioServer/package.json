@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "prod": "npx pkg index.js --config package.json --out-path dist",
+    "prod": "npx pkg -t node20-linux,node20-macos,node20-win index.js --config package.json --out-path dist",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "pkg": {
@@ -14,10 +14,8 @@
   "author": "kittypboxx",
   "license": "ISC",
   "dependencies": {
+    "@yao-pkg/pkg": "^5.11.4",
     "express": "^4.18.2",
     "express-basic-auth": "^1.2.1"
-  },
-  "devDependencies": {
-    "pkg": "^5.8.1"
   }
 }
