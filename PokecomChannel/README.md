@@ -48,6 +48,8 @@ ppc-libpng 1.6.39-3 (ppc-portlibs)
     PNG format graphic files library (for Nintendo Gamecube/Wii homebrew development)
 wii-sdl 1.2.15-10 (wii-portlibs wii-sdl-libs)
     A library for portable low-level access to a video framebuffer, audio output, mouse, and keyboard (Nintendo Wii port)
+ppc-freetype 2.13.2-3 (ppc-portlibs)
+    FreeType is a freely available software library to render fonts.
 ```
 
 If you have issues see the troubleshooting step***
