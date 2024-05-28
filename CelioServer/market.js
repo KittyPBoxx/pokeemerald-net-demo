@@ -1,7 +1,7 @@
  class MarketHelper {
 
     static createDefault() {
-        return new Market(ITEM_PREMIER_BALL, ITEM_BERRY_JUICE, ITEM_ENIGMA_BERRY, ITEM_TM43, ITEM_HELIX_FOSSIL, ITEM_OLD_SEA_MAP);
+        return new Market(ITEM_BERRY_JUICE, ITEM_ENIGMA_BERRY, ITEM_MYSTIC_TICKET, ITEM_EON_TICKET, ITEM_AURORA_TICKET, ITEM_OLD_SEA_MAP);
     }
 
     static getMart() {

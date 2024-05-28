@@ -166,7 +166,16 @@ class StringHelper {
     static convertMessageToHex(message) {
 
         let hex = []
-        message.split("").forEach(char => (charHex.get(char) != undefined) && hex.push(charHex.get(char)))
+        message.split("").forEach(char => {
+            if (char == "#")
+            { 
+                // Placeholder string for the player
+                hex.push(0xFD);
+                hex.push(0x01);
+            } else if (charHex.get(char) != undefined) {
+                hex.push(charHex.get(char))
+            }
+        });
         hex.push(charHex.get("END"));
         return hex;
     

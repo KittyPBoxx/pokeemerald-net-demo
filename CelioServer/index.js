@@ -35,8 +35,7 @@ tcpServer.listen(TCP_SERVER_PORT, function() {
 function handleConnection(conn) {    
     var remoteAddress = conn.remoteAddress + ':' + conn.remotePort;  
     console.log('CELIO SERVER: New client from %s. Waiting for name request.', remoteAddress);
-    conn.write('For the link to work, the Machine needs a special gemstone.');
-  
+    
     conn.on('data', onConnData);  
     conn.once('close', onConnClose);  
     conn.on('error', onConnError);
@@ -55,6 +54,8 @@ function handleConnection(conn) {
     function onConnError(err) {  
       console.log('Connection %s error: %s', remoteAddress, err.message);  
     }  
+
+    conn.write('For the link to work, the Machine needs a special gemstone.');
 }
 
 function getIPv4() {

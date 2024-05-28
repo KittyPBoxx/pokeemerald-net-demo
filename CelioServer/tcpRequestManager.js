@@ -13,8 +13,6 @@ const BATTLE_REQUEST             = StringHelper.asciiToByteArray("BA");
 const MART_REQUEST               = StringHelper.asciiToByteArray("MA");
 // Gift Egg
 const GIFT_EGG_REQUEST           = StringHelper.asciiToByteArray("GE");
-// List Players
-const LIST_PLAYERS_REQUEST       = StringHelper.asciiToByteArray("LP"); // Not yet implimented
 // Mail
 const SEND_MAIL_REQUEST          = StringHelper.asciiToByteArray("SM"); // Not yet implimented
 const RECEIVE_MAIL_REQUEST       = StringHelper.asciiToByteArray("RM"); // Not yet implimented
@@ -37,7 +35,17 @@ class TcpRequestHelper {
         });
           
         requestHandler.registerHandler(WELCOME_MESSAGE_REQUEST, (conn, data, clientList) => {
-            let welcomeMessage = new Message(0xF0, 0x30, StringHelper.convertMessageToHex(WELCOME_MESSAGE));
+            let playersConnectedMsg = ""; 
+            
+            if (clientList.size < 1) {
+                playersConnectedMsg = "No one else is online yet.";
+            } else if (clientList.size == 1) {
+                playersConnectedMsg = "1 other player is online.";
+            } else {
+                playersConnectedMsg = clientList.size + " other players are online.";
+            }
+            
+            let welcomeMessage = new Message(0xF0, 0x30, StringHelper.convertMessageToHex("Welcome #!\\" + playersConnectedMsg));
             console.log('CELIO SERVER: Sending message %s', welcomeMessage.byteArray());
             sendMessage(conn, welcomeMessage);
         });
@@ -88,15 +96,8 @@ class TcpRequestHelper {
             giftEggMessage = new Message(0xF0, 0x4, giftEggHelper.getGiftEgg().getDataArray(conn.trainerId));
             console.log('CELIO SERVER: Sending Gift Egg Data');
             console.log("RAW HEX: " + Array.apply([], giftEggMessage.content).map(x => "0x" +  x.toString(16)).join(","));
-            sendMessage(conn, giftEggMessage);
+            //sendMessage(conn, giftEggMessage);
         });   
-
-        requestHandler.registerHandler(LIST_PLAYERS_REQUEST, (conn, data, clientList) => {
-            // Get the number of players connected
-            // Create 3 8 byte arrays (new line separated with end of line finishing)
-            // append connected players while they exist
-            console.log("Not yet implimented");
-        });
     
         requestHandler.registerHandler(SEND_MAIL_REQUEST, (conn, data, clientList) => {
             // Get all the other players connected in client list and push a value into their mail buffer
