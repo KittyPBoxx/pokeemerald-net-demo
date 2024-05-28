@@ -32,6 +32,7 @@ static GuiImageData * pointer[4];
 static GuiImage * bgImg = nullptr;
 static GuiSound * bgMusic = nullptr;
 static GuiWindow * mainWindow = nullptr;
+static GuiGbaConnections * connections = nullptr;
 static lwp_t guithread = LWP_THREAD_NULL;
 static bool guiHalt = true;
 
@@ -198,7 +199,7 @@ int NetworkTestPopup(const char *title, const char *msg, const char *btn1Label, 
 	while(choice == -1)
 	{
 		usleep(THREAD_SLEEP);
-		bgMusic->Loop();
+		bgMusic->Play();
 
 		if (isStarting)
 		{
@@ -360,7 +361,7 @@ int WindowPrompt(const char *title, const char *msg, const char *btn1Label, cons
 	while(choice == -1)
 	{
 		usleep(THREAD_SLEEP);
-		bgMusic->Loop();
+		bgMusic->Play();
 		if(btn1.GetState() == STATE::CLICKED)
 			choice = 1;
 		else if(btn2.GetState() == STATE::CLICKED)
@@ -521,11 +522,11 @@ static int DebugMenu(GuiSound* bgMusic)
 		{
 			menu = MENU_SETTINGS;
 		}
-		if (WPAD_ButtonsDown(0) & WPAD_BUTTON_MINUS) {
+		else if (WPAD_ButtonsDown(0) & WPAD_BUTTON_MINUS) {
 			menu = MENU_SETTINGS;
 		}
 
-		bgMusic->Loop();
+		bgMusic->Play();
 	}
 	HaltGui();
 
@@ -533,6 +534,12 @@ static int DebugMenu(GuiSound* bgMusic)
 	{
 		logs[i].SetText("");
 	}
+
+	for (int i = 0; i < MAX_LOGS; i++)
+	{
+		w.Remove(&logs[i]);
+	}
+	w.Remove(&backBtn);
 
 	mainWindow->Remove(&w);
 	mainWindow->Remove(&titleTxt);
@@ -553,7 +560,7 @@ void InitGUIThreads()
 /****************************************************************************
  * MenuSettings
  ***************************************************************************/
-static int MenuSettings(GuiSound* bgMusic)
+static int MenuSettings(GuiSound* bgMusic, GuiGbaConnections * connections)
 {
 	int menu = MENU_NONE;
 
@@ -581,10 +588,9 @@ static int MenuSettings(GuiSound* bgMusic)
 	GuiSound btnClick(swish_pcm, swish_pcm_size, SOUND::PCM);
 	btnClick.SetVolume(40);
 
-	GuiGbaConnections connections(serverName);
-	connections.SetPosition(-125, 30);
-	connections.SetAlignment(ALIGN_H::CENTRE, ALIGN_V::MIDDLE);
-	connections.SetEffect(EFFECT::SLIDE_BOTTOM | EFFECT::SLIDE_IN, 40);
+	connections->SetPosition(-125, 30);
+	connections->SetAlignment(ALIGN_H::CENTRE, ALIGN_V::MIDDLE);
+	connections->SetEffect(EFFECT::SLIDE_BOTTOM | EFFECT::SLIDE_IN, 40);
 
 	GuiText networkBtnTxt(gettext("main.network"), 22, (GXColor){0, 0, 0, 255});
 	networkBtnTxt.SetWrap(false, btnLongOutline.GetWidth()-30);
@@ -616,10 +622,10 @@ static int MenuSettings(GuiSound* bgMusic)
 	exitBtn.SetTrigger(&trigHome);
 	exitBtn.SetEffectGrow();
 
-	isPlayerConnected[0] = false;
-	isPlayerConnected[1] = false;
-	isPlayerConnected[2] = false;
-	isPlayerConnected[3] = false;
+	isPlayerConnected[0] = isConnected(0);
+	isPlayerConnected[1] = isConnected(1);
+	isPlayerConnected[2] = isConnected(2);
+	isPlayerConnected[3] = isConnected(3);
 
 	isPlayerNamed[0] = false;
 	isPlayerNamed[1] = false;
@@ -630,7 +636,7 @@ static int MenuSettings(GuiSound* bgMusic)
 	GuiWindow w(screenwidth, screenheight);
 	w.Append(&titleTxt);
 	w.Append(&versionTxt);
-	w.Append(&connections);
+	w.Append(connections);
 
 #ifdef HW_RVL
 	w.Append(&networkBtn);
@@ -641,7 +647,7 @@ static int MenuSettings(GuiSound* bgMusic)
 	mainWindow->Append(&w);
 
 	/* Force inital redraw all on load then we loop */
-	connections.Draw();
+	connections->Draw();
 	bgImg->ApplyBackgroundPattern();
 
 	ResumeGui();
@@ -659,15 +665,16 @@ static int MenuSettings(GuiSound* bgMusic)
 	while(menu == MENU_NONE)
 	{
 		usleep(THREAD_SLEEP);
-		bgMusic->Loop();
+		bgMusic->Play();
 		if(networkBtn.GetState() == STATE::CLICKED)
 		{
 			menu = MENU_SETTINGS_NETWORK;
-		}
-		if (WPAD_ButtonsDown(0) & WPAD_BUTTON_MINUS) {
+		} 
+		else if (WPAD_ButtonsDown(0) & WPAD_BUTTON_MINUS) 
+		{
 			menu = MENU_DEBUG;
 		}
-		if(exitBtn.GetState() == STATE::CLICKED)
+		else if(exitBtn.GetState() == STATE::CLICKED)
 		{
 			int choice = WindowPrompt(
 				gettext("quit.title"),
@@ -687,13 +694,13 @@ static int MenuSettings(GuiSound* bgMusic)
 		{
 			if (!isPlayerConnected[i] && isConnected(i) > 0)
 			{
-				connections.ConnectPlayer(i + 1);
+				connections->ConnectPlayer(i + 1);
 				isPlayerConnected[i] = true;
 			} 
 
 			if (isPlayerConnected[i] && !isPlayerNamed[i] && hasPlayerName(i))
 			{
-				connections.SetPlayerName(i + 1, getPlayerName(i));
+				connections->SetPlayerName(i + 1, getPlayerName(i));
 				isPlayerNamed[i] = true;
 			}
 		}
@@ -703,7 +710,7 @@ static int MenuSettings(GuiSound* bgMusic)
 			if (hasServerName())
 			{
 				strcpy(serverName, getServerName());
-				connections.SetServerName(serverName);
+				connections->SetServerName(serverName);
 				serverSet = true;
 			}
 		}
@@ -731,7 +738,7 @@ static int MenuSettings(GuiSound* bgMusic)
 		{
 			forceUiRefreshLoop = 0;
 			HaltGui();
-			connections.Draw(); // Try and prevent the main ui going glitchy
+			connections->Draw(); // Try and prevent the main ui going glitchy
 			bgImg->ApplyBackgroundPattern();
 			ResumeGui();
 		}
@@ -744,8 +751,16 @@ static int MenuSettings(GuiSound* bgMusic)
 	}
 
 	HaltGui();
+
+	w.Remove(&titleTxt);
+	w.Remove(&versionTxt);
+	w.Remove(connections);
+	#ifdef HW_RVL
+		w.Remove(&networkBtn);
+	#endif
+
+	w.Remove(&exitBtn);
 	mainWindow->Remove(&w);
-	mainWindow->Remove(&titleTxt);
 	return menu;
 }
 
@@ -825,7 +840,9 @@ static int NetworkConfigurationMenu(GuiSound* bgMusic)
 	while(menu == MENU_NONE)
 	{
 		usleep(THREAD_SLEEP);
-		bgMusic->Loop();
+
+		bgMusic->Play();
+
 		if(backBtn.GetState() == STATE::CLICKED)
 		{
 			menu = MENU_SETTINGS;
@@ -840,6 +857,9 @@ static int NetworkConfigurationMenu(GuiSound* bgMusic)
 	}
 	HaltGui();
 
+	w.Remove(&numpad);
+	w.Remove(&backBtn);
+	w.Remove(&testConnectionBtn);
 	mainWindow->Remove(&w);
 	mainWindow->Remove(&titleTxt);
 	mainWindow->Remove(&versionTxt);
@@ -873,13 +893,15 @@ void MainMenu()
 	bgMusic->SetVolume(50);
 	bgMusic->Play(); // startup music
 
+	// The connections object has a lot of image elements. Constantly recreating it is asking for trouble 
+	connections = new GuiGbaConnections(serverName);
+
 	while(currentMenu != MENU_EXIT)
 	{
-		bgMusic->Loop();
 		switch (currentMenu)
 		{
 			case MENU_SETTINGS:
-				currentMenu = MenuSettings(bgMusic);
+				currentMenu = MenuSettings(bgMusic, connections);
 				break;
 			case MENU_SETTINGS_NETWORK:
 				currentMenu = NetworkConfigurationMenu(bgMusic);
@@ -888,7 +910,7 @@ void MainMenu()
 				currentMenu = DebugMenu(bgMusic);
 				break;
 			default: // unrecognized menu
-				currentMenu = MenuSettings(bgMusic);
+				currentMenu = MenuSettings(bgMusic, connections);
 				break;
 		}
 	}

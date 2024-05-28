@@ -1,8 +1,8 @@
 ### Main ###
 msgid "main.title"
-msgstr "Pokecom Channel"
+msgstr "Pokécom Channel"
 msgid "main.version"
-msgstr "v0.1.1"
+msgstr "v0.1.2"
 msgid "main.network"
 msgstr "Configure Network"
 msgid "main.exit"
@@ -10,7 +10,7 @@ msgstr "Exit"
 
 ### Network Config Page ###
 msgid "network.title"
-msgstr "Pokecom Channel - Configure Network"
+msgstr "Pokécom Channel - Configure Network"
 msgid "network.back"
 msgstr "Go Back"
 msgid "network.test"

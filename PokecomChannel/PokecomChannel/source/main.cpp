@@ -35,6 +35,7 @@ int ExitRequested = 0;
 
 void ExitApp()
 {
+	ShutdownAudio();
 	ShutoffRumble();
 	StopGX();
 	exit(0);

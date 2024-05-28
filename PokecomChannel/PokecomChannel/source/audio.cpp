@@ -18,9 +18,7 @@
  ***************************************************************************/
 void InitAudio()
 {
-	AUDIO_Init(nullptr);
 	ASND_Init();
-	MP3Player_Init();
 	ASND_Pause(0);
 }
 

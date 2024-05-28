@@ -172,6 +172,8 @@ typedef struct {
     char fetchedMsgBuffer[1024]; //!< Where we store data that has been recived
     char sendMsgBuffer[1024]; //!< Where we store data that we want to send when ready
 	SerialConnector *serialConnector; //!< A Reference serial connector so we can write data directly to its buffer
+	int sock; //!< The socket we are currently connected to
+	bool waitingForServer; //!< If we need to reconnect to the socket
 } TCPConnector;
 
 
@@ -200,9 +202,24 @@ static void startNetworkThread(TCPConnector *httpArgs)
 	LOG_AS("Http Handle is %x\n", httd_handles[httpArgs->serialConnector->gcport]);
 	if (httd_handles[httpArgs->serialConnector->gcport] != LWP_THREAD_NULL && httpArgs->threadActive == 1)
 	{
-		httpArgs->requestReset = 1;
-		LOG_NS("Thread already exists. Reseting to init\n");
-		return;
+		if (httpArgs->waitingForServer)
+		{
+			LOG_NS("Thread already exists but is stuck. We need to recreate it.\n");
+			LWP_SuspendThread(httd_handles[httpArgs->serialConnector->gcport]);
+			usleep(10000);
+			net_close (httpArgs->sock);
+			usleep(10000);
+			httpArgs->requestStop = 1;
+			LWP_ResumeThread(httd_handles[httpArgs->serialConnector->gcport]);
+			LWP_JoinThread(httd_handles[httpArgs->serialConnector->gcport], NULL);
+			httpArgs->waitingForServer = 0;
+		}
+		else 
+		{
+			LOG_NS("Thread already exists. Reseting to init\n");
+			httpArgs->requestReset = 1;
+			return;
+		}
 	} 
 
 	httpArgs->threadActive = 1;
@@ -803,7 +820,7 @@ void *httpd (TCPConnector *connector) {
 
 	connector->connectionResult = CONNECTION_STARTING;
 
-	int sock = -1;
+	connector->sock = -1;
 	int active = 1;
 	s32 conn = 0;
 
@@ -813,8 +830,8 @@ void *httpd (TCPConnector *connector) {
 			case TCP_STATE_INIT: 
 			{
 				LOG_NS("Trying to start connection\n");
-				sock = net_socket (AF_INET, SOCK_STREAM, IPPROTO_IP);
-				s32 conn = net_connect(sock, (struct sockaddr *) &server, sizeof server);
+				connector->sock = net_socket (AF_INET, SOCK_STREAM, IPPROTO_IP);
+				s32 conn = net_connect(connector->sock, (struct sockaddr *) &server, sizeof server);
 				if (conn < 0) 
                 {
 					connector->connectionResult = CONNECTION_ERROR_CONNECTION_FAILED;
@@ -825,15 +842,19 @@ void *httpd (TCPConnector *connector) {
 
 				usleep(5000);
 
+				connector->waitingForServer = 1;
+
 				// Make sure we've already read data that was sent when starting the conenction
-				conn = net_recv (sock, connector->fetchedMsgBuffer, 100, TCP_FLAGS);
+				conn = net_recv (connector->sock, connector->fetchedMsgBuffer, 100, TCP_FLAGS);
 
                 // Send the SERVER_NAME_REQUEST to the server
-				conn = net_send(sock, SERVER_NAME_REQUEST, strlen(SERVER_NAME_REQUEST), TCP_FLAGS);
+				conn = net_send(connector->sock, SERVER_NAME_REQUEST, strlen(SERVER_NAME_REQUEST), TCP_FLAGS);
 
                 // Read response (which should be server name like SN_<NAME_OF_SERVER>)
 				memset (connector->fetchedMsgBuffer, 0, 1024);
-				conn = net_recv (sock, connector->fetchedMsgBuffer, 1024, TCP_FLAGS);
+				conn = net_recv (connector->sock, connector->fetchedMsgBuffer, 1024, TCP_FLAGS);
+
+				connector->waitingForServer = 0;
 
 				if (!hasServerName())
 				{
@@ -846,9 +867,13 @@ void *httpd (TCPConnector *connector) {
                 {
 					LOG_AS("Connected to %s\n", connector->fetchedMsgBuffer + 3);
 
-					conn = net_send(sock, WELCOME_REQUEST, strlen(WELCOME_REQUEST), TCP_FLAGS);
+					connector->waitingForServer = 1;
 
-					conn = net_recv (sock, connector->fetchedMsgBuffer, 1024, TCP_FLAGS);
+					conn = net_send(connector->sock, WELCOME_REQUEST, strlen(WELCOME_REQUEST), TCP_FLAGS);
+
+					conn = net_recv (connector->sock, connector->fetchedMsgBuffer, 1024, TCP_FLAGS);
+
+					connector->waitingForServer = 0;
 
 					if (connector->fetchedMsgBuffer[0] == 0x25)
 					{
@@ -871,7 +896,9 @@ void *httpd (TCPConnector *connector) {
 
 					memcpy(&(connector->sendMsgBuffer)[strlen(SEND_PLAYER_DATA)], &connector->serialConnector->playerData, sizeof(connector->serialConnector->playerData));
 
-					conn = net_send(sock, connector->sendMsgBuffer, strlen(SEND_PLAYER_DATA) + sizeof connector->serialConnector->playerData, TCP_FLAGS);
+					connector->waitingForServer = 1;
+					conn = net_send(connector->sock, connector->sendMsgBuffer, strlen(SEND_PLAYER_DATA) + sizeof connector->serialConnector->playerData, TCP_FLAGS);
+					connector->waitingForServer = 0;
 					connector->connectionResult = CONNECTION_SUCCESS;
 					connector->internalState = TCP_STATE_WAITING;
 
@@ -889,15 +916,18 @@ void *httpd (TCPConnector *connector) {
 
 				if (connector->requestReset == 1)
 				{
-					if (sock >= 0)
+					if (connector->sock >= 0)
 					{
-						net_close (sock);
+						net_close (connector->sock);
 					}
 					
 					connector->internalState = TCP_STATE_INIT;
 					connector->requestReset = 0;
+					connector->requestSend = 0;
+					connector->requestFetch = 0;
+					connector->requestStop = 0;
 				}
-                if (connector->requestSend == 1)
+                else if (connector->requestSend == 1)
                 {
                     connector->internalState = TCP_STATE_SENDING;
                 }
@@ -919,7 +949,9 @@ void *httpd (TCPConnector *connector) {
 				LOG_AS("Doing Transmission of size %x from ch %x\n", connector->trSize, connector->trVitrualChannel);
 				memset (connector->sendMsgBuffer, 0, 1024);
 				memcpy(connector->sendMsgBuffer, &(connector->serialConnector->receivedMsgBuffer)[connector->trVitrualChannel * VIRTUAL_CHANNEL_SIZE], connector->trSize);
-                conn = net_send(sock, connector->sendMsgBuffer, connector->trSize, TCP_FLAGS);
+				connector->waitingForServer = 1;
+                conn = net_send(connector->sock, connector->sendMsgBuffer, connector->trSize, TCP_FLAGS);
+				connector->waitingForServer = 0;
 				LOG_AS("Sending Server Message %02X %02X %02X %02X\n", connector->sendMsgBuffer[0], connector->sendMsgBuffer[1], connector->sendMsgBuffer[2], connector->sendMsgBuffer[3]);
 				if (conn < 0) 
                 {
@@ -939,7 +971,9 @@ void *httpd (TCPConnector *connector) {
 			{
 				LOG_NS("Doing Fetch\n");
             	memset (connector->fetchedMsgBuffer, 0, 1024);
-				conn = net_recv (sock, connector->fetchedMsgBuffer, 1024, TCP_FLAGS);
+				connector->waitingForServer = 1;
+				conn = net_recv (connector->sock, connector->fetchedMsgBuffer, 1024, TCP_FLAGS);
+				connector->waitingForServer = 0;
 				if (conn < 0) 
                 {
 					LOG_NS("Connection Failed - Fetching Data\n");
@@ -988,7 +1022,7 @@ void *httpd (TCPConnector *connector) {
 			}	break;
     		case TCP_STATE_DONE:
 			{
-                net_close (sock);
+                net_close (connector->sock);
 				active = 0;
 				connector->internalState = TCP_STATE_INIT;
 			}	break;

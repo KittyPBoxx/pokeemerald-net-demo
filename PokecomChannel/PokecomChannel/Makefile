@@ -37,7 +37,8 @@ LIBS :=	-lpng `freetype-config --libs` -lz -lfat -lwiiuse -lbte -lmad -lasnd -lo
 # list of directories containing libraries, this must be the top level containing
 # include and lib
 #---------------------------------------------------------------------------------
-LIBDIRS	:= $(PORTLIBS)
+LIBDIRS	:= $(PORTLIBS) $(CURDIR)/dependencies 
+# NOTICE: $(CURDIR)/dependencies is included to override libasnd version to 2.4.1 as 2.6.0 breaks things 
 
 #---------------------------------------------------------------------------------
 # no real need to edit anything past this point unless you need to add additional

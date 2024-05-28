@@ -54,6 +54,10 @@ ppc-freetype 2.13.2-3 (ppc-portlibs)
 
 If you have issues see the troubleshooting step***
 
+### Dependency Warning
+
+`libasnd 2.6.0` appears to have issues with current dolphin. To resolve this I've had to statically link a compiled version `libasnd 2.4.1` to build against. If you are trying to build this in the future there's a chance the current libogc version will have broken compatibility with `libasnd 2.4.1`. If so, remove the reference to the static library `$(CURDIR)/dependencies`. A fix has been pushed to dolphin, so once people are on the new version there should be no issue.  
+
 ## Debugging
 
 On the wii channel main screen you can press `minus` for some debug info.

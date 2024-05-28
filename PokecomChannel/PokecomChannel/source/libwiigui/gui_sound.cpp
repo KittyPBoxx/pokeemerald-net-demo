@@ -147,12 +147,12 @@ void GuiSound::Loop() {
 		switch(type)
 		{
 			case SOUND::PCM:
-			if (!IsPlaying())
-			Play();
+				if (!IsPlaying())
+					Play();
 			break;
 			case SOUND::MP3:
-			if(!MP3Player_IsPlaying())
-			MP3Player_PlayBuffer(sound, length, NULL);
+				if(!MP3Player_IsPlaying())
+					MP3Player_PlayBuffer(sound, length, NULL);
 			break;
 		}
 	}
