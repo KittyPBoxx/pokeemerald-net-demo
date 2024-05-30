@@ -60,7 +60,7 @@ There are 3 main components to this project:
 - A homebrew Wii channel allowing up-to 4 GBA's to connect to the server (per wii)
 - A NodeJS Server, with TCP Server for game connections and a Webserver for providing a UI for configuring the server
 
-You can download a zip of the latest releas build here https://github.com/KittyPBoxx/pokeemerald-net-demo/releases/tag/v0.1.0
+You can download a zip of the latest releas build here https://github.com/KittyPBoxx/pokeemerald-net-demo/releases
 
 ## Quick Start
 
@@ -74,7 +74,7 @@ See the 'requirements' section for all the software/hardware you can use. You al
 
 On top of these you will need
 
-- Your Pokemon Emerald (U) backup rom
+- Your Pokemon Emerald (U) backup rom\g
 - A GBA bios.bin file
 
 ![](tutorial_1_files.png)
@@ -101,19 +101,23 @@ Configure the following settings
 
 ![](tutorial_3_dolphin_setup.png)
 
-The easiest way to run the wii channel is just to drag and drop the 'pokecom-channel.dol' file into dolphin 
+The easiest way to run the wii channel is just to drag and drop the 'pokecom-channel.dol' file into dolphin.
 
 ![](tutorial_4_load_dol.png)
 
+> If you are running on a real wii, copy the whole PokecomChannel folder (including, the dol, icon.png and meta.xml) to the `apps` folder on your sd card and launch through homebrew
+
 ### 4 - Run the server
 
-In windows double click on celioserver-win.exe or run it from the command line.
+To locally host a server in windows double click on celioserver-win.exe or run it from the command line.
 
 Once it is running you can go to the web ui by going to `localhost:8081` in your web browser
 
 The game server runs at localhost:9000 so dolphin should automatically be able to connect if they are running on the same PC
 
 ![](tutorial_5_server.png)
+
+> If you can't run a server yourself you can configure the wii channel to connect the the public test server `130.162.161.228:9000`. Be aware this is a test environment an may go offline or be unstable.
 
 ### 5 - Play the game
   

@@ -19,6 +19,7 @@
 #include "shop.h"
 #include "constants/items.h"
 #include "field_message_box.h"
+#include "easy_chat.h"
 
 // Player name + 1 + Gender + Special Warp Flag + Trainer ID)
 #define PLAYER_INFO_LENGTH (PLAYER_NAME_LENGTH + 1 + 1 + 1 + TRAINER_ID_LENGTH)
@@ -26,7 +27,7 @@
 #define WELCOME_MSG_LENGTH 48
 
 #define NET_GAME_NAME_LENGTH 20
-static const u8 sNetGameName[] = _("Emerald Net Demo 1.0");
+static const u8 sNetGameName[] = _("Emerald Net Demo 0.1.2");
 
 #define NET_SERVER_ADDR_LENGTH 14
 static const u8 sNetServerAddr[] = _("127.0.0.1:9000");
@@ -44,6 +45,11 @@ static const u8 sWaitingMessage[] = _("Connecting To Server:");
 static const u8 sExchangeMessage[] = _("Partner Found! Link starting:");
 
 static const u8 trainerName[] = _("NET");
+
+static const u16 sLinkProfileWords[EASY_CHAT_BATTLE_WORDS_COUNT - 4] = {
+    EC_WORD_FRIEND,
+    EC_WORD_LINK
+};
 
 static void Task_StartNetworkTask(u8 taskId);
 static void Task_NetworkTaskLoop(u8 taskId);
@@ -964,10 +970,32 @@ static void Task_TradeProcess(u8 taskId)
             break;
 
         case TRADE_SEND_REQUEST:
-            gStringVar3[0] = 'T'; gStringVar3[1] = 'R'; gStringVar3[2] = '_'; gStringVar3[3] = '0';
-            configureSendRecvMgr(NET_CONN_SEND_REQ, (vu32 *) &gStringVar3[0], 4, NET_CONN_STATE_SEND, TRADE_APPEND_MON_DATA);
-            break;
+        {
+            u32 i;
+            bool8 useFriendLink = TRUE;
+            gStringVar3[0] = 'T'; gStringVar3[1] = 'R'; gStringVar3[2] = '_';
 
+            // If the trainer profile starts with 'FRIEND LINK' 
+
+            for (i = 0; i < ARRAY_COUNT(sLinkProfileWords); i++)
+                useFriendLink = useFriendLink && gSaveBlock1Ptr->easyChatProfile[i] == sLinkProfileWords[i];
+
+            if (useFriendLink)
+            {
+                gStringVar3[3] = '1';
+                gStringVar3[4] = gSaveBlock1Ptr->easyChatProfile[2] >> 8;
+                gStringVar3[5] = gSaveBlock1Ptr->easyChatProfile[2] & 0xFF;
+                gStringVar3[6] = gSaveBlock1Ptr->easyChatProfile[3] >> 8;
+                gStringVar3[7] = gSaveBlock1Ptr->easyChatProfile[3] & 0xFF;
+                configureSendRecvMgrChunked(NET_CONN_SEND_REQ, (vu32 *) &gStringVar3[0], 8, NET_CONN_STATE_SEND, TRADE_APPEND_MON_DATA, MINIMUM_CHUNK_SIZE);
+            }
+            else
+            {
+                gStringVar3[3] = '0';
+                configureSendRecvMgr(NET_CONN_SEND_REQ, (vu32 *) &gStringVar3[0], 4, NET_CONN_STATE_SEND, TRADE_APPEND_MON_DATA);
+            }
+            break;
+        }
         case TRADE_APPEND_MON_DATA:
             sSendRecvMgr.retryPoint = TRADE_APPEND_MON_DATA;
             configureSendRecvMgrChunked(NET_CONN_SCH1_REQ, (vu32 *) &gPlayerParty[gSpecialVar_0x8005], sizeof(struct Pokemon), NET_CONN_STATE_SEND, TRADE_TRANSMIT_REQUEST, MINIMUM_CHUNK_SIZE);

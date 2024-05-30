@@ -48,6 +48,14 @@ LilycoveCity_GTS_F1_EventScript_DeskMonitor::
 	case 0, LilycoveCity_GTS_F1_EventScript_TryDisplayConnectionStatus
 	case MULTI_B_PRESSED, LilycoveCity_GTS_F1_EventScript_DontDisplayConnectionStatus
 
+LilycoveCity_GTS_F1_EventScript_ProfileGuy::
+	lock
+	faceplayer
+	msgbox ProfileMan_Text_OnlineSafety, MSGBOX_DEFAULT
+	goto_if_set FLAG_SYS_CHAT_USED, ProfileMan_EventScript_AskToSeeNewProfile
+	goto ProfileMan_EventScript_AskToSeeProfile
+	end
+
 LilycoveCity_GTS_F1_EventScript_ResultScreen::
 	msgbox LilycoveCity_GTS_F1_Text_Version, MSGBOX_NPC
 	releaseall
@@ -117,10 +125,10 @@ LilycoveCity_GTS_F1_Text_TheUnderSeaCables::
 	.string "sink them to the ocean floor.$"
 
 LilycoveCity_GTS_F1_Text_ItsSoEasyToConnect::
-	.string "It's so easy to connect to people\n"
-	.string "nowadays.\p"
+	.string "Connecting to others has become\p"
+	.string "so simple.\p"
 	.string "Is it my age or does the world feel\n"
-	.string "smaller?$"
+	.string "smaller now?$"
 
 LilycoveCity_GTS_F1_Text_WhenMyFriendMoved::
 	.string "When my friend moved to KANTO I thought\n"
@@ -147,7 +155,7 @@ LilycoveCity_GTS_F1_EventScript_Text_ConnectionOnline:
 	.string "{COLOR GREEN}{SHADOW LIGHT_GREEN}ONLINE$"
 
 LilycoveCity_GTS_F1_Text_Version::
-	.string "Emerald Net Demo 1.0$"
+	.string "Emerald Net Demo 0.1.2$"
 
 LilycoveCity_GTS_F1_Text_Info::
 	.string "Welcome to LILYCOVE NETWORK CENTER!\n"
@@ -155,5 +163,15 @@ LilycoveCity_GTS_F1_Text_Info::
 	.string "terminal on the left.\p" 
 	.string "Through the door behind me you can find\n"
 	.string "network demos to try when connected.$"
+
+ProfileMan_Text_OnlineSafety::
+	.string "Did you know that your profile can\n"
+	.string "help you stay safe while online?\p"
+	.string "If a trainers profile starts with\n"
+	.string "{COLOR BLUE}{SHADOW LIGHT_BLUE}FRIEND LINK {COLOR DARK_GRAY}{SHADOW LIGHT_GRAY}then they'll only link\l"
+	.string "to players with a matching profile.\p"
+	.string "Actually, my hobby is collecting the\n"
+	.string "profiles of POKéMON TRAINERS.$"
+
 
 

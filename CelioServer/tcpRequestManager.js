@@ -111,13 +111,23 @@ class TcpRequestHelper {
 
         requestHandler.registerHandler(TRADE_REQUEST, (conn, data, clientList) => {
             console.log("Trade request");
+
+            let friendKey = new Uint8Array(4);
+            if (data[0] == "1".charCodeAt(0)) {
+                console.log("Using Friend link code: " + data[1] + data[2] + data[3] + data[4]);
+                friendKey[0] = data[1];
+                friendKey[1] = data[2];
+                friendKey[2] = data[3];
+                friendKey[3] = data[4];
+            }
+
             // 100 bytes is the size of a mon
             // The server was sent 16 bytes + the mon. By now it has trimmed 3 bytes off the start
             let dataArray = new Uint8Array(100 + 16);
             dataArray.set(new Uint8Array(StringHelper.convertMessageToHex(conn.playerName)), 0);
             dataArray.set(data.slice(13, data.length), 16);
 
-            let candidateTrade = [...clientList.values()].filter(client => client.tradeState == TRADING_STATE_OFFERING)[0];
+            let candidateTrade = [...clientList.values()].filter(client => client.tradeState == TRADING_STATE_OFFERING && JSON.stringify(client.friendKey) == JSON.stringify(friendKey))[0];
             if (candidateTrade) {
                 // Someone else already offering
                 if (clientList.get(candidateTrade.id))
@@ -134,6 +144,7 @@ class TcpRequestHelper {
                 // We are the first, offer ourselves
                 clientList.get(conn.trainerId).tradeOffer = new Message(0xF0, 100 + 16, dataArray);
                 clientList.get(conn.trainerId).tradeResponse = new Message(0xF0, 100 + 16, new Uint8Array(100 + 16));
+                clientList.get(conn.trainerId).friendKey = friendKey;
                 clientList.get(conn.trainerId).tradeState = TRADING_STATE_OFFERING;
                 new Promise(resolve => setTimeout(resolve, 3000)).then(() => {
 
