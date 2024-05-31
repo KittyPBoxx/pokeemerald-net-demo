@@ -96,7 +96,7 @@ class TcpRequestHelper {
             giftEggMessage = new Message(0xF0, 0x4, giftEggHelper.getGiftEgg().getDataArray(conn.trainerId));
             console.log('CELIO SERVER: Sending Gift Egg Data');
             console.log("RAW HEX: " + Array.apply([], giftEggMessage.content).map(x => "0x" +  x.toString(16)).join(","));
-            //sendMessage(conn, giftEggMessage);
+            sendMessage(conn, giftEggMessage);
         });   
     
         requestHandler.registerHandler(SEND_MAIL_REQUEST, (conn, data, clientList) => {

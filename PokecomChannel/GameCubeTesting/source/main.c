@@ -835,7 +835,7 @@ void *httpd (TCPConnector *connector) {
 				if (conn < 0) 
                 {
 					connector->connectionResult = CONNECTION_ERROR_CONNECTION_FAILED;
-					LOG_NS("Connection Failed - Connection To Socket\n");
+					LOG_AS("Connection Failed - Connection To Socket, error code %i\n", conn);
 					connector->threadActive = 0;
 					return NULL;
 				}
