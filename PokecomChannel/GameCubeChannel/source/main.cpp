@@ -33,9 +33,13 @@ int ExitRequested = 0;
 
 void ExitApp()
 {
+	VIDEO_SetBlack(true);
+	VIDEO_Flush();
+	VIDEO_WaitVSync();
+	VIDEO_WaitVSync();
 	ShutdownAudio();
 	StopGX();
-	exit(0);
+	SYS_ResetSystem(SYS_HOTRESET, 0, 0);
 }
 
 int main(int argc, char *argv[])
@@ -65,9 +69,9 @@ int main(int argc, char *argv[])
 			VIDEO_WaitVSync();
 			PAD_ScanPads();
 
-			int buttonsDown = PAD_ButtonsDown(0);
+			int buttonsHeld = PAD_ButtonsHeld(0);
 			
-			if (buttonsDown & PAD_BUTTON_START) 
+			if (buttonsHeld & PAD_BUTTON_START) 
 			{
 				ExitApp();
 			}

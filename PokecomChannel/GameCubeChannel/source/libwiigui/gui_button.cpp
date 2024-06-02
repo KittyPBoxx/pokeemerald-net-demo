@@ -137,6 +137,15 @@ void GuiButton::Draw()
 	if(!this->IsVisible())
 		return;
 
+	if (state == STATE::DISABLED)
+	{
+		image->SetAlpha(50);
+	}
+	else
+	{
+		image->SetAlpha(255);
+	}
+
 	if(state == STATE::SELECTED || state == STATE::HELD)
 	{
 		if(imageOver)

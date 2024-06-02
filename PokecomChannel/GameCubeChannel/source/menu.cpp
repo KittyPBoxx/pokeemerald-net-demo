@@ -512,8 +512,8 @@ static int MenuSettings(GuiSound* bgMusic, GuiGbaConnections * connections)
 	GuiImage networkBtnImg(&btnLongOutline);
 	GuiImage networkBtnImgOver(&btnLongOutlineOver);
 	GuiButton networkBtn(btnLongOutline.GetWidth(), btnLongOutline.GetHeight());
-	networkBtn.SetAlignment(ALIGN_H::CENTRE, ALIGN_V::BOTTOM);
-	networkBtn.SetPosition(0, -35);
+	networkBtn.SetAlignment(ALIGN_H::LEFT, ALIGN_V::BOTTOM);
+	networkBtn.SetPosition(50, -35);
 	networkBtn.SetLabel(&networkBtnTxt);
 	networkBtn.SetImage(&networkBtnImg);
 	networkBtn.SetImageOver(&networkBtnImgOver);
@@ -521,6 +521,23 @@ static int MenuSettings(GuiSound* bgMusic, GuiGbaConnections * connections)
 	networkBtn.SetSoundClick(&btnClick);
 	networkBtn.SetTrigger(&trigA);
 	networkBtn.SetEffectGrow();
+
+	GuiText exitBtnTxt(gettext("main.exit"), 22, (GXColor){0, 0, 0, 255});
+	GuiImage exitBtnImg(&btnOutline);
+	exitBtnImg.Tint(50, -100, -100);
+	GuiImage exitBtnImgOver(&btnOutlineOver);
+	exitBtnImgOver.Tint(50, -50, -50);
+	GuiButton exitBtn(btnOutline.GetWidth(), btnOutline.GetHeight());
+	exitBtn.SetAlignment(ALIGN_H::RIGHT, ALIGN_V::BOTTOM);
+	exitBtn.SetPosition(-50, -35);
+	exitBtn.SetLabel(&exitBtnTxt);
+	exitBtn.SetImage(&exitBtnImg);
+	exitBtn.SetImageOver(&exitBtnImgOver);
+	exitBtn.SetSoundOver(&btnSoundOver);
+	exitBtn.SetSoundClick(&btnClick);
+	exitBtn.SetTrigger(&trigA);
+	exitBtn.SetEffectGrow();
+	exitBtn.SetState(STATE::DISABLED);
 
 	isPlayerConnected[0] = isConnected(1);
 	isPlayerConnected[1] = isConnected(2);
@@ -534,6 +551,7 @@ static int MenuSettings(GuiSound* bgMusic, GuiGbaConnections * connections)
 	w.Append(&versionTxt);
 	w.Append(connections);
 	w.Append(&networkBtn);
+	w.Append(&exitBtn);
 
 	mainWindow->Append(&w);
 
@@ -551,7 +569,11 @@ static int MenuSettings(GuiSound* bgMusic, GuiGbaConnections * connections)
 		if(networkBtn.GetState() == STATE::CLICKED)
 		{
 			menu = MENU_SETTINGS_NETWORK;
-		} 
+		}
+		else if(exitBtn.GetState() == STATE::CLICKED)
+		{
+			menu = MENU_EXIT;
+		}
 		else if (PAD_ButtonsDown(0) & PAD_BUTTON_Y) 
 		{
 			menu = MENU_DEBUG;
@@ -559,6 +581,15 @@ static int MenuSettings(GuiSound* bgMusic, GuiGbaConnections * connections)
 		else if (PAD_ButtonsDown(0) & PAD_BUTTON_X) 
 		{
 			menu = MENU_SETTINGS_NETWORK;
+		}
+		
+		if (PAD_ButtonsHeld(0) == (PAD_TRIGGER_Z) && (exitBtn.GetState() == STATE::DISABLED || exitBtn.GetState() == STATE::DEFAULT)) 
+		{
+			exitBtn.SetState(STATE::DEFAULT);
+		}
+		else if (exitBtn.GetState() == STATE::DEFAULT)
+		{
+			exitBtn.SetState(STATE::DISABLED);
 		}
 
 		/* Handle GBA connections in the ui */
@@ -613,6 +644,7 @@ static int MenuSettings(GuiSound* bgMusic, GuiGbaConnections * connections)
 	w.Remove(&versionTxt);
 	w.Remove(connections);
 
+	w.Remove(&exitBtn);
 	w.Remove(&networkBtn);
 	mainWindow->Remove(&w);
 	return menu;
@@ -782,4 +814,6 @@ void MainMenu()
 	delete pointer[0];
 
 	mainWindow = nullptr;
+
+	ExitApp();
 }

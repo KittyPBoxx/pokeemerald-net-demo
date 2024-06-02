@@ -5,6 +5,8 @@ msgid "main.version"
 msgstr "v0.1.2"
 msgid "main.network"
 msgstr "(X) Configure Network"
+msgid "main.exit"
+msgstr "(Z) Reset"
 
 ### Network Config Page ###
 msgid "network.title"
