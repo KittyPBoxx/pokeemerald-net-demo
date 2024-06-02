@@ -1,0 +1,70 @@
+### Main ###
+msgid "main.title"
+msgstr "Pokécom Channel - GC"
+msgid "main.version"
+msgstr "v0.1.2"
+msgid "main.network"
+msgstr "(X) Configure Network"
+
+### Network Config Page ###
+msgid "network.title"
+msgstr "Pokécom Channel - Configure Network"
+msgid "network.back"
+msgstr "(X) Go Back"
+msgid "network.test"
+msgstr "(Y) Test Connection"
+msgid "network.prompt"
+msgstr "Enter IPv4 Address + Port:"
+
+### Exit Popup ###
+msgid "quit.title"
+msgstr "Close Channel"
+msgid "quit.msg"
+msgstr "All devices will disconnect. Are you sure you want to quit?"
+msgid "quit.yes"
+msgstr "Yes"
+msgid "quit.no"
+msgstr "No"
+
+### Network Test Popup ###
+msgid "networkTest.title"
+msgstr "Connection Test"
+msgid "networkTest.close"
+msgstr "(X) Close"
+msgid "networkTest.attemptingConnection"
+msgstr "Attempting to connect..."
+msgid "networkTest.CONNECTION_STARTING"
+msgstr "Connection Timed Out"
+msgid "networkTest.CONNECTION_ERROR_INVALID_IP"
+msgstr "IP Invalid (Expecting xxx.xxx.xxx.xxx:PORT)"
+networkTest.CONNECTION_ERROR_COULD_NOT_RESOLVE_IPV4
+msgstr "Could not resolve domain to ipv4 address"
+msgid "networkTest.CONNECTION_ERROR_NO_NETWORK_DEVICE"
+msgstr "Failed to start network device (i.e no wifi or ethernet)."
+msgid "networkTest.CONNECTION_ERROR_CONNECTION_FAILED"
+msgstr "Could not reach server."
+msgid "networkTest.CONNECTION_ERROR_INVALID_RESPONSE"
+msgstr "Unrecognised response from server"
+msgid "networkTest.CONNECTION_SUCCESS"
+msgstr "Successful connection made to "
+msgid "networkTest.CONNECTION_INIT"
+msgstr "An temporary error occured. Please Retry."
+msgid "networkTest.connectionOverrideNotification"
+msgstr "All new connections will be modified to use this server."
+
+### Connections GUI ###
+msgid "connectionsUI.noServer"
+msgstr "No Server Configured"
+msgid "connectionsUI.playerWaiting"
+msgstr "Waiting..."
+msgid "connectionsUI.controllerInstructions"
+msgstr "Connect a controller in port 1."
+msgid "connectionsUI.gbaInstructions"
+msgstr "Connect your GBA in port 2 or 3, then restart it."
+
+### Debug Menu ###
+msgid "debug.title"
+msgstr "Debug Info"
+msgid "debug.back"
+msgstr "[Y] Go Back"
+

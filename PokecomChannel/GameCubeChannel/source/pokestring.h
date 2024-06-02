@@ -7,7 +7,7 @@
  ***************************************************************************/
 
 /* Special pokemon symbols like Lv (for level) will be converted to ? */
- static char byteToChar(char byte)
+ static inline char byteToChar(char byte)
  {
     switch (byte) 
     {

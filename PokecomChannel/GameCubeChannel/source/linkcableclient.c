@@ -1,3 +1,13 @@
+/****************************************************************************
+ * Pokecom Channel
+ * KittyPBoxx 2023
+ *
+ * linkcableclient.cpp
+ * Client that connections to the GBA via gamecube port on wii
+ ***************************************************************************/
+
+#include "linkcableclient.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -5,13 +15,13 @@
 #include <string.h>
 #include <malloc.h>
 #include <ogcsys.h>
-#include <gccore.h>
 #include <network.h>
 #include <debug.h>
 #include <errno.h>
 #include <wiiuse/wpad.h>
 #include "seriallink.h"
 #include "pokestring.h"
+#include "uilogger.h"
 
 #define ENABLE_DEBUG_LOG   // enable ERROR_LOG
 
@@ -89,8 +99,21 @@
 
 #define SERVER_NAME_SIZE 32
 
-static void *xfb = NULL;
-static GXRModeObj *rmode = NULL;
+/*
+* Honestly, I give up... trying to get get a good speed on a real wii with a ton of latency and dolphin with no latency 
+* is impossible. So we just detect if they are running dolphin and prevent the slow down fallback option.
+*/
+#define SPR_ECID_U        924
+#define __stringify_1(x)        #x
+#define __stringify(x)          __stringify_1(x)
+
+#define mfspr(rn)       ({unsigned long rval; \
+                    asm volatile("mfspr %0," __stringify(rn) \
+                            : "=r" (rval)); rval; })
+bool IsDolphin(void)
+{        
+    return (mfspr(SPR_ECID_U) == 0x0d96e200);
+}
 
 // ======================= GBA LINK STUFF ======================================================
 
@@ -142,18 +165,6 @@ enum {
 	TCP_STATE_DONE
 };
 
-// Connection states 
-enum {
-	CONNECTION_INIT = 0,
-    CONNECTION_SUCCESS, // Bind to remote address
-    CONNECTION_STARTING, // Ready to start a connection
-	CONNECTION_ERROR_INVALID_IP, // Not a valid IPv4 Addr
-	CONNECTION_ERROR_COULD_NOT_RESOLVE_IPV4, // DNS resolution returned no valid ip addresses
-    CONNECTION_ERROR_NO_NETWORK_DEVICE, // No network device (e.g wifi card or ethernet) could be found. The may be an emulator that has no support or a wii mini (which has no wifi)
-    CONNECTION_ERROR_CONNECTION_FAILED, // Failed to bind the the address
-    CONNECTION_ERROR_INVALID_RESPONSE // Handshake failed when we send RUBY_SAPPHIRE we expect a response SN_<NAME_OF_SERVER>
-};
-
 typedef struct {
 	u8 connectionResult; //!< State the (externally visible) client is in i.e if it's connected or has had an error 
     u8 internalState; //!<  State the (internal) current connection is in i.e sending data, waiting e.t.c
@@ -176,7 +187,6 @@ typedef struct {
 	bool waitingForServer; //!< If we need to reconnect to the socket
 } TCPConnector;
 
-
 // ======================= Vars ======================================================
 static char overrideAddress[32]; // = "192.168.1.10:9000"; // = "127.0.0.1:9000"; // Some examples of what you might want to use testing locally or on dolphin
 static char serverName[SERVER_NAME_SIZE];
@@ -185,33 +195,145 @@ static u32 isPlayerConnected[4];
 
 // ======================= Functions ======================================================
 
-void *initialise();
 static void *httpd (TCPConnector *connector);
 static void *seriald (void * port);
 
-static u32 hasServerName()
+u32 hasServerName()
 {
 	return serverName[0] != 0;
 }
 
-static	lwp_t httd_handles[4] = { (lwp_t)LWP_THREAD_NULL, (lwp_t)LWP_THREAD_NULL, (lwp_t)LWP_THREAD_NULL, (lwp_t)LWP_THREAD_NULL };
-static	lwp_t serd_handles[4] = { (lwp_t)LWP_THREAD_NULL, (lwp_t)LWP_THREAD_NULL, (lwp_t)LWP_THREAD_NULL, (lwp_t)LWP_THREAD_NULL };
+char* getServerName()
+{
+	return serverName;
+}
+
+u32 isConnected(u32 port)
+{
+	return isPlayerConnected[port];
+}
+
+u32 hasPlayerName(u32 port)
+{
+	return playerNames[port][0] != 0;
+}
+
+char* getPlayerName(u32 port)
+{
+	return playerNames[port];
+}
+
+void setOverrideAddress(char* ipv4)
+{
+	strcpy(overrideAddress, ipv4);
+}
+
+u32 testTCPConnection(char* ipv4)
+{
+	s32 ret;
+
+	char localip[16] = {0};
+	char gateway[16] = {0};
+	char netmask[16] = {0};
+
+	ret = if_config ( localip, netmask, gateway, TRUE, 20);
+
+
+	if (ret < 0) 
+    {
+		return CONNECTION_ERROR_NO_NETWORK_DEVICE;
+	}
+
+	char addrCopy[64];
+	strcpy(addrCopy, ipv4);
+	char * ipOrDomainName; 
+	char * portString; 
+	char * token = strtok(addrCopy, ":");
+	int port = 80;
+	if(token != NULL) 
+	{
+		ipOrDomainName = token;
+		portString = strtok(NULL, ":");
+		if (portString != NULL && portString[0] != '\0')
+		{
+			char *temp;
+			port = strtol(portString, &temp, 10);
+		}
+	}
+	else
+	{
+		return CONNECTION_ERROR_INVALID_IP;
+	}
+
+	struct sockaddr_in server;
+	struct in_addr ipTest;
+
+	memset (&server, 0, sizeof (server));
+	memset (&ipTest, 0, sizeof (ipTest));
+
+	if (inet_aton(ipOrDomainName, &ipTest))
+	{
+		server.sin_family= AF_INET;
+		server.sin_len = sizeof (struct sockaddr_in); 
+		server.sin_port= htons (port);
+		server.sin_addr.s_addr = inet_addr(ipOrDomainName);
+	}
+	else
+	{
+		return CONNECTION_ERROR_CONNECTION_FAILED;
+	}
+
+	int sock = -1;
+	sock = net_socket (AF_INET, SOCK_STREAM, IPPROTO_IP);
+	s32 conn = net_connect(sock, (struct sockaddr *) &server, sizeof server);
+	if (conn < 0) 
+	{
+		return CONNECTION_ERROR_CONNECTION_FAILED;
+	}
+
+	char msgBuffer[100];
+	memset (&msgBuffer, 0, 100);
+	conn = net_recv (sock, msgBuffer, 100, TCP_FLAGS);
+	conn = net_send(sock, SERVER_NAME_REQUEST, strlen(SERVER_NAME_REQUEST), TCP_FLAGS);
+
+	memset (msgBuffer, 0, 100);
+	conn = net_recv(sock, msgBuffer, 100, TCP_FLAGS);
+
+	net_close(sock);
+
+	if (msgBuffer[0] == 'S' && msgBuffer[1] == 'N' && msgBuffer[2] == '_') 
+	{
+		if (!hasServerName())
+		{
+			for (int i = 3; i < SERVER_NAME_SIZE - 1; i++)
+			{
+				serverName[i - 3] = msgBuffer[i];
+			}
+		}
+		return CONNECTION_SUCCESS;
+	} 
+
+	return CONNECTION_ERROR_INVALID_RESPONSE;
+}
+
+static	lwp_t httd_handles[2] = { (lwp_t)LWP_THREAD_NULL, (lwp_t)LWP_THREAD_NULL };
+static	lwp_t serd_handles[2] = { (lwp_t)LWP_THREAD_NULL, (lwp_t)LWP_THREAD_NULL };
 
 static void startNetworkThread(TCPConnector *httpArgs)
 {
-	LOG_AS("Http Handle is %x\n", httd_handles[httpArgs->serialConnector->gcport]);
-	if (httd_handles[httpArgs->serialConnector->gcport] != LWP_THREAD_NULL && httpArgs->threadActive == 1)
+	LOG_AS("Http Handle is %x\n", httd_handles[httpArgs->serialConnector->gcport - 1]);
+	if (httd_handles[httpArgs->serialConnector->gcport - 1] != LWP_THREAD_NULL && httpArgs->threadActive == 1)
 	{
 		if (httpArgs->waitingForServer)
 		{
 			LOG_NS("Thread already exists but is stuck. We need to recreate it.\n");
-			LWP_SuspendThread(httd_handles[httpArgs->serialConnector->gcport]);
+			LWP_SuspendThread(httd_handles[httpArgs->serialConnector->gcport - 1]);
 			usleep(10000);
 			net_close (httpArgs->sock);
 			usleep(10000);
 			httpArgs->requestStop = 1;
-			LWP_ResumeThread(httd_handles[httpArgs->serialConnector->gcport]);
-			LWP_JoinThread(httd_handles[httpArgs->serialConnector->gcport], NULL);
+			LWP_ResumeThread(httd_handles[httpArgs->serialConnector->gcport - 1]);
+			LWP_JoinThread(httd_handles[httpArgs->serialConnector->gcport - 1], NULL);
 			httpArgs->waitingForServer = 0;
 		}
 		else 
@@ -220,7 +342,7 @@ static void startNetworkThread(TCPConnector *httpArgs)
 			httpArgs->requestReset = 1;
 			return;
 		}
-	} 
+	}
 
 	httpArgs->threadActive = 1;
 
@@ -236,8 +358,6 @@ static void startNetworkThread(TCPConnector *httpArgs)
 	httpArgs->requestReset = 0;
 	httpArgs->connectionResult = CONNECTION_INIT;
 
-	printf("Trying to connect ...\n");
-
 	ret = if_config ( localip, netmask, gateway, TRUE, 20);
 
 	if (ret>=0) 
@@ -246,81 +366,43 @@ static void startNetworkThread(TCPConnector *httpArgs)
 
 		httpArgs->internalState = TCP_STATE_INIT;
 
-		LWP_CreateThread(&httd_handles[httpArgs->serialConnector->gcport], /* thread handle */
-			            (void* (*)(void*))  httpd,                         /* code */
-			            httpArgs,                                          /* arg pointer for thread */
-			            NULL,			                                   /* stack base */
-			            8*1024,	                                           /* stack size */
-			            50				                                   /* thread priority */ );
+		LWP_CreateThread(&httd_handles[httpArgs->serialConnector->gcport - 1], /* thread handle */
+			            (void* (*)(void*))  httpd,                             /* code */
+			            httpArgs,                                              /* arg pointer for thread */
+			            NULL,			                                       /* stack base */
+			            8*1024,	                                               /* stack size */
+			            200				                                       /* thread priority */ );
 
 	} 
     else 
     {
-		LOG_AS("Network configuration failed! Error %i\n", ret);
+		LOG_NS("Network configuration failed!\n");
 		httpArgs->internalState = CONNECTION_ERROR_NO_NETWORK_DEVICE;
 	}
 }
 
-
-//---------------------------------------------------------------------------------
-int main(int argc, char **argv) {
-//---------------------------------------------------------------------------------
-
-	xfb = initialise();
-
+void setupGBAConnectors() 
+{
 	LOG_N("\nStarting Pokecom Channel\n");
-
-	u8 *port0 = malloc(sizeof(*port0));
-	*port0 = 0;
-	LWP_CreateThread(&serd_handles[0],	            /* thread handle */
-			         seriald,                       /* code */
-			         (void *) port0,		        /* arg pointer for thread */
-			         NULL,			                /* stack base */
-			         16*1024,		                /* stack size */
-			         250          			        /* thread priority */ );
-
 				
 	u8 *port1 = malloc(sizeof(*port1));
 	*port1 = 1;
-	LWP_CreateThread(&serd_handles[1],	            /* thread handle */
+	LWP_CreateThread(&serd_handles[0],	            /* thread handle */
 			         seriald,                       /* code */
 			         (void *) port1,		        /* arg pointer for thread */
 			         NULL,			                /* stack base */
 			         16*1024,		                /* stack size */
-			         200          			        /* thread priority */ );
+			         250          			        /* thread priority */ );
 
 	u8 *port2 = malloc(sizeof(*port2));
 	*port2 = 2;
-	LWP_CreateThread(&serd_handles[2],	            /* thread handle */
+	LWP_CreateThread(&serd_handles[1],	            /* thread handle */
 			         seriald,                       /* code */
 			         (void *) port2,		        /* arg pointer for thread */
 			         NULL,			                /* stack base */
 			         16*1024,		                /* stack size */
 			         200          			        /* thread priority */ );
 
-	u8 *port3 = malloc(sizeof(*port3));
-	*port3 = 3;
-	LWP_CreateThread(&serd_handles[3],	            /* thread handle */
-			         seriald,                       /* code */
-			         (void *) port3,		        /* arg pointer for thread */
-			         NULL,			                /* stack base */
-			         16*1024,		                /* stack size */
-			         200          			        /* thread priority */ );
-
-
-	while(1) {
-
-		VIDEO_WaitVSync();
-		PAD_ScanPads();
-
-		int buttonsDown = PAD_ButtonsDown(0);
-		
-		if (buttonsDown & PAD_BUTTON_START) {
-			exit(0);
-		}
-	}
-
-	return 0;
 }
 
 // --------------------------------------------------------------------------------
@@ -334,10 +416,12 @@ static void *seriald (void * port)
 	connector.internalState = SERIAL_STATE_INIT;
 	connector.connectionResult = SERIAL_NO_GBA;
 
+	print_ui_log("STARTING GBA CONN");
+
 	LOG_AS("Waiting for a GBA (via DOL-011) in port %x...\n", connector.gcport);
 
 	TCPConnector tcpConnector;
-	tcpConnector.remoteAddressAndPort = "127.0.0.1:9000";
+	tcpConnector.remoteAddressAndPort = "192.168.1.2:9000";
 	tcpConnector.serialConnector = &connector;
 
     int active = 1;    
@@ -373,7 +457,7 @@ static void *seriald (void * port)
                 }
                 else
                 {
-                    VIDEO_WaitVSync();
+                    usleep(10000);
                 }
 
             } break;
@@ -431,7 +515,6 @@ static void *seriald (void * port)
 					if (validatePokeStringMsg(connector.receivedMsgBuffer, 0, 8))
 					{
 						bytesToChars(connector.receivedMsgBuffer, 0, 8);
-						printf("\n                       \n      \n"); // <------ For some reason this fixes an issue that sometimes happens in dolphin when multiple clients are trying to reach the server at the same time 
 						LOG_AS("\n----- PLAYER INFO -----\nNAME: %s\n", &connector.receivedMsgBuffer[0]);
 
 						for (int i = 0; i < 8; i++) 
@@ -439,6 +522,7 @@ static void *seriald (void * port)
 							connector.playerData.playerName[i] = connector.receivedMsgBuffer[i];
 							playerNames[connector.gcport][i] = connector.receivedMsgBuffer[i];
 						}
+
 
 						if (connector.receivedMsgBuffer[8] % 2 == 0)
 						{
@@ -532,8 +616,8 @@ static void *seriald (void * port)
 				}
                 else 
                 {
-                    VIDEO_WaitVSync();
-					usleep(100000);
+                    //VIDEO_WaitVSync();
+					usleep(1000);
                 }
 
             } break;
@@ -689,7 +773,12 @@ static void *seriald (void * port)
             } break;
 			case SERIAL_STATE_ERROR:
             {
+			  print_ui_log("SERIAL ERROR");
 			  LOG_NS("Connection Error Resetting...\n");
+
+			  if (!IsDolphin())
+				switchToSlowTransfer();
+
 			  connector.requestSend = 0;
 			  connector.requestReceive = 0;
 			  connector.requestStop = 0;
@@ -739,7 +828,6 @@ void *httpd (TCPConnector *connector) {
 	}
 	
 	connector->remoteAddressAndPort[63] = '\0'; // Make sure the string is actually terminated
-
 	if (overrideAddress[0] != 0)
 	{
 		strcpy(addrCopy, overrideAddress);
@@ -795,28 +883,7 @@ void *httpd (TCPConnector *connector) {
 		LOG_NS("Domain name was sent from rom. This can't be resolved on a game cube. Exiting\n");
 		usleep(100000);
 		return NULL;
-
-		// struct hostent *hp = net_gethostbyname(ipOrDomainName);
-		
-		// if (!(hp->h_addrtype == PF_INET)) 
-        // {
-		// 	LOG_AS("Failed - IPV4 returned for address %s (may only be ipv6)", addrCopy);
-		// 	connector->connectionResult = CONNECTION_ERROR_COULD_NOT_RESOLVE_IPV4;
-		// 	connector->threadActive = 0;
-		// 	return NULL;
-		// } 
-
-		// memset (&server, 0, sizeof (struct sockaddr_in));
-		// server.sin_family = AF_INET;
-		// server.sin_len = sizeof (struct sockaddr_in); 
-		// server.sin_port = htons (port);
-
-		// struct in_addr **addr_list;
-		// addr_list = (struct in_addr **)hp->h_addr_list;
-		// char* resolvedIP = inet_ntoa(*addr_list[0]);
-		// server.sin_addr.s_addr = inet_addr(resolvedIP);
-		// LOG_AS("Creating Connection port %s at address %s using ip (%s)\n\n", portString, ipOrDomainName, resolvedIP);
-	} 
+	}
 
 	connector->connectionResult = CONNECTION_STARTING;
 
@@ -835,7 +902,7 @@ void *httpd (TCPConnector *connector) {
 				if (conn < 0) 
                 {
 					connector->connectionResult = CONNECTION_ERROR_CONNECTION_FAILED;
-					LOG_AS("Connection Failed - Connection To Socket, error code %i\n", conn);
+					LOG_NS("Connection Failed - Connection To Socket\n");
 					connector->threadActive = 0;
 					return NULL;
 				}
@@ -844,10 +911,10 @@ void *httpd (TCPConnector *connector) {
 
 				connector->waitingForServer = 1;
 
-				// Make sure we've already read data that was sent when starting the conenction
+				// Make sure we've already read data that was sent when starting the connection
 				conn = net_recv (connector->sock, connector->fetchedMsgBuffer, 100, TCP_FLAGS);
 
-                // Send the SERVER_NAME_REQUEST to the server
+                // Send the string SERVER_NAME_REQUEST to the server
 				conn = net_send(connector->sock, SERVER_NAME_REQUEST, strlen(SERVER_NAME_REQUEST), TCP_FLAGS);
 
                 // Read response (which should be server name like SN_<NAME_OF_SERVER>)
@@ -858,7 +925,10 @@ void *httpd (TCPConnector *connector) {
 
 				if (!hasServerName())
 				{
-					memcpy(serverName, &connector->fetchedMsgBuffer, SERVER_NAME_SIZE - 1);
+					for (int i = 3; i < SERVER_NAME_SIZE - 1; i++)
+					{
+						serverName[i - 3] = connector->fetchedMsgBuffer[i];
+					}
 				}
 
 				if (connector->fetchedMsgBuffer[0] == 'S' && 
@@ -870,7 +940,6 @@ void *httpd (TCPConnector *connector) {
 					connector->waitingForServer = 1;
 
 					conn = net_send(connector->sock, WELCOME_REQUEST, strlen(WELCOME_REQUEST), TCP_FLAGS);
-
 					conn = net_recv (connector->sock, connector->fetchedMsgBuffer, 1024, TCP_FLAGS);
 
 					connector->waitingForServer = 0;
@@ -922,9 +991,9 @@ void *httpd (TCPConnector *connector) {
 					}
 					
 					connector->internalState = TCP_STATE_INIT;
-					connector->requestReset = 0;
 					connector->requestSend = 0;
 					connector->requestFetch = 0;
+					connector->requestReset = 0;
 					connector->requestStop = 0;
 				}
                 else if (connector->requestSend == 1)
@@ -1034,29 +1103,4 @@ void *httpd (TCPConnector *connector) {
 	usleep(50000);
 	connector->threadActive = 0;
 	return NULL;
-}
-
-
-//---------------------------------------------------------------------------------
-void *initialise() {
-//---------------------------------------------------------------------------------
-
-	void *framebuffer;
-
-	VIDEO_Init();
-	PAD_Init();
-
-	rmode = VIDEO_GetPreferredMode(NULL);
-	framebuffer = MEM_K0_TO_K1(SYS_AllocateFramebuffer(rmode));
-	console_init(framebuffer,20,20,rmode->fbWidth,rmode->xfbHeight,rmode->fbWidth*VI_DISPLAY_PIX_SZ);
-
-	VIDEO_Configure(rmode);
-	VIDEO_SetNextFramebuffer(framebuffer);
-	VIDEO_SetBlack(FALSE);
-	VIDEO_Flush();
-	VIDEO_WaitVSync();
-	if(rmode->viTVMode&VI_NON_INTERLACE) VIDEO_WaitVSync();
-
-	return framebuffer;
-
 }
