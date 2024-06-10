@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node index.js",
     "prod": "npx pkg -t node20-linux,node20-macos,node20-win index.js --config package.json --out-path dist",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node test.js"
   },
   "pkg": {
     "assets": "web-src/*"
