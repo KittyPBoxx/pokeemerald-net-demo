@@ -6,6 +6,7 @@ var tcpRequestHelper = require('./tcpRequestManager.js');
 var webServerHelper = require('./webserver.js');
 var net = require('net');
 var os = require('os');
+var LOG = require('./log.js');
 
 const WEB_SERVER_PORT = 8081;
 const TCP_SERVER_PORT = 9000;
@@ -17,7 +18,7 @@ const serverBanner = `
 ██║     ██╔══╝  ██║     ██║██║   ██║     ╚════██║██╔══╝  ██╔══██╗╚██╗ ██╔╝██╔══╝  ██╔══██╗
 ╚██████╗███████╗███████╗██║╚██████╔╝     ███████║███████╗██║  ██║ ╚████╔╝ ███████╗██║  ██║
  ╚═════╝╚══════╝╚══════╝╚═╝ ╚═════╝      ╚══════╝╚══════╝╚═╝  ╚═╝  ╚═══╝  ╚══════╝╚═╝  ╚═╝`
-console.log(serverBanner + "\n\n");    
+ LOG.raw(serverBanner + "\n\n");    
 
 const tcpRequestHandler = tcpRequestHelper.createRequestHandler(trainerHelper, marketHelper, giftEggHelper);
 const webServer         = webServerHelper.createWebServer(WEB_SERVER_PORT, trainerHelper, marketHelper, giftEggHelper, tcpRequestHandler);
@@ -25,16 +26,15 @@ const webServer         = webServerHelper.createWebServer(WEB_SERVER_PORT, train
 var tcpServer = net.createServer();    
 tcpServer.on('connection', handleConnection);
 tcpServer.listen(TCP_SERVER_PORT, function() {
-    
-    console.log('TCP Game Server started with local address: %s:%j', getIPv4(), tcpServer.address().port);
-    console.log('Current Trainer: ' + trainerHelper.getTrainer().toString());
-    console.log('Current Market: ' + marketHelper.getMart().toString());
-    console.log('Current Gift Egg: ' + giftEggHelper.getGiftEgg().toString());
+    LOG.raw('TCP Game Server started with local address: %s:%j', getIPv4(), tcpServer.address().port);
+    LOG.raw('Current Trainer: ' + trainerHelper.getTrainer().toString());
+    LOG.raw('Current Market: ' + marketHelper.getMart().toString());
+    LOG.raw('Current Gift Egg: ' + giftEggHelper.getGiftEgg().toString());
 });
 
 function handleConnection(conn) {    
     var remoteAddress = conn.remoteAddress + ':' + conn.remotePort;  
-    console.log('CELIO SERVER: New client from %s. Waiting for name request.', remoteAddress);
+    LOG.log('CELIO SERVER: New client from %s. Waiting for name request.', remoteAddress);
     
     conn.on('data', onConnData);  
     conn.once('close', onConnClose);  
@@ -42,17 +42,17 @@ function handleConnection(conn) {
   
     function onConnData(d) {  
       let dataString = StringHelper.byteArrayToAscii(d);
-      console.log('LANETTE CLIENT: %s', remoteAddress, dataString.substring(0,16));  
+      LOG.log('LANETTE CLIENT: %s', remoteAddress, dataString.substring(0,16));  
       tcpRequestHandler.handleRequest(conn, d);
     }
   
     function onConnClose() {  
-      console.log('Connection from %s closed', remoteAddress);  
+      LOG.log('Connection from %s closed', remoteAddress);  
       tcpRequestHandler.closeConnection(conn);
     }
   
     function onConnError(err) {  
-      console.log('Connection %s error: %s', remoteAddress, err.message);  
+      LOG.log('Connection %s error: %s', remoteAddress, err.message);  
     }  
 
     conn.write('For the link to work, the Machine needs a special gemstone.');

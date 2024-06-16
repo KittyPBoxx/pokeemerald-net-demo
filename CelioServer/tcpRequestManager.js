@@ -1,4 +1,5 @@
 var StringHelper = require('./pokeString.js');
+var LOG = require('./log.js');
 
 const WELCOME_MESSAGE = "Celio: Shinx of black quartz, judge\\my preview.";
 var SERVER_NAME = "Celio's Server"
@@ -14,8 +15,8 @@ const MART_REQUEST               = StringHelper.asciiToByteArray("MA");
 // Gift Egg
 const GIFT_EGG_REQUEST           = StringHelper.asciiToByteArray("GE");
 // Mail
-const SEND_MAIL_REQUEST          = StringHelper.asciiToByteArray("SM"); // Not yet implimented
-const RECEIVE_MAIL_REQUEST       = StringHelper.asciiToByteArray("RM"); // Not yet implimented
+const POST_MAIL_REQUEST          = StringHelper.asciiToByteArray("PM"); 
+const READ_MAIL_REQUEST          = StringHelper.asciiToByteArray("RM"); 
 // Wonder Trade
 const TRADE_REQUEST              = StringHelper.asciiToByteArray("TR");
 
@@ -30,7 +31,7 @@ class TcpRequestHelper {
         const requestHandler = new RequestHandler();
 
         requestHandler.registerHandler(SERVER_NAME_REQUEST, (conn, data, clientList) => {
-            console.log('CELIO SERVER: Sending message %s', SERVER_NAME);  
+            LOG.log('CELIO SERVER: Sending message %s', SERVER_NAME);  
             conn.write("SN_" + SERVER_NAME);
         });
           
@@ -46,7 +47,7 @@ class TcpRequestHelper {
             }
             
             let welcomeMessage = new Message(0xF0, 0x30, StringHelper.convertMessageToHex("Welcome #!\\" + playersConnectedMsg));
-            console.log('CELIO SERVER: Sending message %s', welcomeMessage.byteArray());
+            LOG.log('CELIO SERVER: Sending message %s', welcomeMessage.byteArray());
             sendMessage(conn, welcomeMessage);
         });
           
@@ -54,67 +55,128 @@ class TcpRequestHelper {
             let dataArray = new Uint8Array(data.length);
             dataArray.set(data);
           
-            conn.playerName = [...dataArray.subarray(0, 8)].map(c => String.fromCharCode(c) == "\x00" ? "" : String.fromCharCode(c)).join("");
+            conn.name       = [...dataArray.subarray(0, 8)].map(c => String.fromCharCode(c) == "\x00" ? "" : String.fromCharCode(c)).join("");
             conn.trainerId  = (((dataArray[8] & 0xff) << 8) | (dataArray[8 + 1] & 0xff));
             conn.gender     = dataArray[8 + 2] == 1 ? "GIRL" : "BOY";
             conn.game       = [...dataArray.subarray(8 + 2 + 1, data.length)].map(c => String.fromCharCode(c) == "\x00" ? "" : String.fromCharCode(c)).join("");
+            conn.id         = conn.name + conn.trainerId + conn.gender + conn.game + conn.remoteAddress;
           
             conn.lastSentMail = "";
             conn.unreadMail = [];
 
-            // TODO: add a hash of client list and remote address to the client list with the value being the conn and set all the right values on the conn
-            requestHandler.clientList.set(conn.trainerId, {"name"         : conn.playerName, 
-                                                           "id"           : conn.trainerId,
-                                                           "gender"       : conn.gender,
-                                                           "game"         : conn.game, 
-                                                           "lastSentMail" : conn.lastSentMail,
-                                                           "unreadMail"   : conn.unreadMail,
-                                                           "tradeState"   : TRADING_STATE_NONE});
+            requestHandler.clientList.set(conn.id, {"name"         : conn.name, 
+                                                    "id"           : conn.id,
+                                                    "trainerId"    : conn.trainerId,
+                                                    "gender"       : conn.gender,
+                                                    "game"         : conn.game, 
+                                                    "lastSentMail" : conn.lastSentMail,
+                                                    "unreadMail"   : conn.unreadMail,
+                                                    "tradeState"   : TRADING_STATE_NONE});
           
-            console.log('GAME: %s | PLAYER: %s | GENDER: %s | TRAINER_ID %s', conn.game, conn.playerName, conn.gender, conn.trainerId);
+            LOG.log('GAME: %s | PLAYER: %s | GENDER: %s | TRAINER_ID %s', conn.game, conn.name, conn.gender, conn.trainerId);
         });
           
           
         var battleMessage = new Message(0xF0, 0x10 * 3, trainerHelper.getTrainer().get3MonTeam());
         requestHandler.registerHandler(BATTLE_REQUEST, (conn, data, clientList) => {
             battleMessage = new Message(0xF0, 0x10 * 3, trainerHelper.getTrainer().get3MonTeam());
-            console.log('CELIO SERVER: Sending Battle Data');  // TODO make this array longer
-            console.log("RAW HEX: " + Array.apply([], battleMessage.content).map(x => "0x" +  x.toString(16)).join(","));
+            LOG.log('CELIO SERVER: Sending Battle Data');  // TODO make this array longer
+            LOG.log("RAW HEX: " + Array.apply([], battleMessage.content).map(x => "0x" +  x.toString(16)).join(","));
             sendMessage(conn, battleMessage);
         });
           
         var martMessage = new Message(0xF0, 0x10, marketHelper.createDefault().getDataArray());
         requestHandler.registerHandler(MART_REQUEST, (conn, data, clientList) => {
             martMessage = new Message(0xF0, 0x10, marketHelper.getMart().getDataArray());
-            console.log('CELIO SERVER: Sending Mart Data');
-            console.log("RAW HEX: " + Array.apply([], martMessage.content).map(x => "0x" +  x.toString(16)).join(","));
+            LOG.log('CELIO SERVER: Sending Mart Data');
+            LOG.log("RAW HEX: " + Array.apply([], martMessage.content).map(x => "0x" +  x.toString(16)).join(","));
             sendMessage(conn, martMessage);
         });
           
         var giftEggMessage = new Message(0xF0, 0x4, giftEggHelper.createDefault().getDataArray());
         requestHandler.registerHandler(GIFT_EGG_REQUEST, (conn, data, clientList) => {
-            giftEggMessage = new Message(0xF0, 0x4, giftEggHelper.getGiftEgg().getDataArray(conn.trainerId));
-            console.log('CELIO SERVER: Sending Gift Egg Data');
-            console.log("RAW HEX: " + Array.apply([], giftEggMessage.content).map(x => "0x" +  x.toString(16)).join(","));
+            giftEggMessage = new Message(0xF0, 0x4, giftEggHelper.getGiftEgg().getDataArray(conn.id));
+            LOG.log('CELIO SERVER: Sending Gift Egg Data');
+            LOG.log("RAW HEX: " + Array.apply([], giftEggMessage.content).map(x => "0x" +  x.toString(16)).join(","));
             sendMessage(conn, giftEggMessage);
         });   
     
-        requestHandler.registerHandler(SEND_MAIL_REQUEST, (conn, data, clientList) => {
-            // Get all the other players connected in client list and push a value into their mail buffer
-            console.log("Not yet implimented");
-        });
-        requestHandler.registerHandler(RECEIVE_MAIL_REQUEST, (conn, data, clientList) => {
-            // If another player cant be found trading return the error stuff
-            // if a parter can be found switch the data and download
-            console.log("Not yet implimented");
+        requestHandler.registerHandler(POST_MAIL_REQUEST, (conn, data, clientList) => {
+
+            let friendKey = new Uint8Array(4);
+            let isUsingFriendCode = data[0] == "1".charCodeAt(0);
+            if (isUsingFriendCode) {
+                LOG.log("Using Friend link code: " + data[1] + data[2] + data[3] + data[4]);
+                friendKey[0] = data[1];
+                friendKey[1] = data[2];
+                friendKey[2] = data[3];
+                friendKey[3] = data[4];
+            }
+
+            // Original Message example: (PM_1) (0000) (1234) (5678)
+            // PM_ will get cut off by the server so data[0] will be "1" if a freindKey is used (0 if not)
+            // The next 4 bytes would be the freind key
+            // The next 8 bytes Will be 4 easy chat words 
+            
+            clientList.get(conn.id).mail = {
+                "id" : conn.id,
+                "sentTime" : Date.now(),
+                "friendKey": friendKey,
+                "name": clientList.get(conn.id).name,
+                "message": data.slice(5, 5 + (2 * 4)) // 4, 2 Byte easy chat words
+            }
+
+            sendMessage(conn, new Message(0xF0, 0x2, new Uint8Array([200, isUsingFriendCode ? 1 : 0])));
         });
 
-        requestHandler.registerHandler(TRADE_REQUEST, (conn, data, clientList) => {
-            console.log("Trade request");
+        requestHandler.registerHandler(READ_MAIL_REQUEST, (conn, data, clientList) => {
 
             let friendKey = new Uint8Array(4);
             if (data[0] == "1".charCodeAt(0)) {
-                console.log("Using Friend link code: " + data[1] + data[2] + data[3] + data[4]);
+                LOG.log("Using Friend link code: " + data[1] + data[2] + data[3] + data[4]);
+                friendKey[0] = data[1];
+                friendKey[1] = data[2];
+                friendKey[2] = data[3];
+                friendKey[3] = data[4];
+            }
+
+            let lastMailCheckTime = clientList.get(conn.id).lastMailCheckTime;
+            if (!lastMailCheckTime) {
+                clientList.get(conn.id).lastMailCheckTime = new Date(null); // Start of Unix time
+                lastMailCheckTime = new Date(null);
+            }
+
+
+
+            let nextMessage = [...clientList.values()].map(c => c.mail)
+                                                      .filter(m => !!m)
+                                                      .filter(m => m.id != conn.id)
+                                                      .filter(m => m.friendKey = friendKey)
+                                                      .filter(m => m.sentTime > lastMailCheckTime)
+                                                      .sort((a, b) => b.getTime() - a.getTime())[0];
+
+            console.log("MAIL" + JSON.stringify(nextMessage));
+
+            if (nextMessage) {
+
+                clientList.get(conn.id).lastMailCheckTime = nextMessage.sentTime;
+                var mailHex = new Uint8Array(8 + 2 + 2 + 2 + 2); // Player name + 4 easy chat words
+                mailHex.set(new Uint8Array(StringHelper.convertMessageToHex(nextMessage.name)), 0);
+                mailHex.set(nextMessage.message, 8);
+                
+                sendMessage(conn, new Message(0xF0, 8 + 2 + 2 + 2 + 2, mailHex)); 
+
+            } else  {
+                sendMessage(conn, new Message(0xF0, 0x2, new Uint8Array([0xFF, 0xFF]))); // No new messages
+            }
+        });
+
+        requestHandler.registerHandler(TRADE_REQUEST, (conn, data, clientList) => {
+            LOG.log("Trade request");
+
+            let friendKey = new Uint8Array(4);
+            if (data[0] == "1".charCodeAt(0)) {
+                LOG.log("Using Friend link code: " + data[1] + data[2] + data[3] + data[4]);
                 friendKey[0] = data[1];
                 friendKey[1] = data[2];
                 friendKey[2] = data[3];
@@ -124,7 +186,7 @@ class TcpRequestHelper {
             // 100 bytes is the size of a mon
             // The server was sent 16 bytes + the mon. By now it has trimmed 3 bytes off the start
             let dataArray = new Uint8Array(100 + 16);
-            dataArray.set(new Uint8Array(StringHelper.convertMessageToHex(conn.playerName)), 0);
+            dataArray.set(new Uint8Array(StringHelper.convertMessageToHex(conn.name)), 0);
             dataArray.set(data.slice(13, data.length), 16);
 
             let candidateTrade = [...clientList.values()].filter(client => client.tradeState == TRADING_STATE_OFFERING && JSON.stringify(client.friendKey) == JSON.stringify(friendKey))[0];
@@ -142,26 +204,26 @@ class TcpRequestHelper {
 
             } else {
                 // We are the first, offer ourselves
-                clientList.get(conn.trainerId).tradeOffer = new Message(0xF0, 100 + 16, dataArray);
-                clientList.get(conn.trainerId).tradeResponse = new Message(0xF0, 100 + 16, new Uint8Array(100 + 16));
-                clientList.get(conn.trainerId).friendKey = friendKey;
-                clientList.get(conn.trainerId).tradeState = TRADING_STATE_OFFERING;
+                clientList.get(conn.id).tradeOffer = new Message(0xF0, 100 + 16, dataArray);
+                clientList.get(conn.id).tradeResponse = new Message(0xF0, 100 + 16, new Uint8Array(100 + 16));
+                clientList.get(conn.id).friendKey = friendKey;
+                clientList.get(conn.id).tradeState = TRADING_STATE_OFFERING;
                 new Promise(resolve => setTimeout(resolve, 3000)).then(() => {
 
-                    if (clientList.get(conn.trainerId).tradeState == TRADING_STATE_OFFERING) {
+                    if (clientList.get(conn.id).tradeState == TRADING_STATE_OFFERING) {
 
                         // The offer was not accepted. Wait another 100 ms just incase
-                        clientList.get(conn.trainerId).tradeState = TRADING_STATE_NONE;
+                        clientList.get(conn.id).tradeState = TRADING_STATE_NONE;
                         new Promise(resolve => setTimeout(resolve, 100)).then(() => {
 
-                            sendMessage(conn, clientList.get(conn.trainerId).tradeResponse);
+                            sendMessage(conn, clientList.get(conn.id).tradeResponse);
 
                         });
 
                     } else {
 
                         // Offer was accepted we can return right away
-                        sendMessage(conn, clientList.get(conn.trainerId).tradeResponse);
+                        sendMessage(conn, clientList.get(conn.id).tradeResponse);
 
                     }
 
@@ -169,7 +231,7 @@ class TcpRequestHelper {
 
             }
 
-            console.log("Mon from %s: %s", conn.trainerId, dataArray);
+            LOG.log("Mon from %s: %s", conn.id, dataArray);
         });
 
         return requestHandler;
@@ -231,16 +293,21 @@ class RequestHandler {
       let handler = this.handlers.get(messageKey);
   
       if (handler) {
-        handler(conn, data.slice(delimiterIndex + 1, data.length), this.clientList);
+        try {
+            handler(conn, data.slice(delimiterIndex + 1, data.length), this.clientList);
+        } catch (e) {
+            LOG.error(e);
+            conn.write(new Uint8Array(1));
+        }
       } else {
         conn.write(new Uint8Array(1));
-        console.log("UNKNOWN MSG KEY (length %s):\nASCII:%s", data.length, StringHelper.asciiToByteArray(dataString.substring(0,delimiterIndex)).join(","));
-        console.log("RAW HEX: " + Array.apply([], data).map(x => "0x" +  x.toString(16)).join(","));
+        LOG.log("UNKNOWN MSG KEY (length %s):\nASCII:%s", data.length, StringHelper.asciiToByteArray(dataString.substring(0,delimiterIndex)).join(","));
+        LOG.log("RAW HEX: " + Array.apply([], data).map(x => "0x" +  x.toString(16)).join(","));
       }
     }
 
     closeConnection(conn) {
-        this.clientList.delete(conn.trainerId);
+        this.clientList.delete(conn.id);
     }
 
 }

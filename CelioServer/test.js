@@ -6,7 +6,8 @@ var net = require('net');
 var serverAddr = '127.0.0.1';
 var serverPort = 9000;
 
-var FAST_FAIL = true; // Stop tests on the first failure
+const FAST_FAIL = true; // Stop tests on the first failure
+const BETWEEN_TEST_DELAY = 100; // ms
 
 let player1Connected = false;
 let player2Connected = false;
@@ -67,22 +68,26 @@ player2.connect(serverPort, serverAddr, function() {
 
 async function runTests() {
 
-    await sleep(500); 
+    let testsRun = 0;
+    await sleep(BETWEEN_TEST_DELAY); 
 
     // Test server name
     console.log("Test server name");
+    testsRun++;
     player1Validatior.updateValidationFunction(verifyServerNameResponse);
     player1.write(new Uint8Array([as("N"), as("R"), as("_")]));
-    await sleep(500); 
+    await sleep(BETWEEN_TEST_DELAY); 
 
     // Test Welcome message player 1
     console.log("Test Welcome message player 1");
+    testsRun++;
     player1Validatior.updateValidationFunction(verifyFirstWelcomeMessageResponse);
     player1.write(new Uint8Array([as("W"), as("R"), as("_")]));
-    await sleep(500); 
+    await sleep(BETWEEN_TEST_DELAY); 
     
     // TEST - Setup player 1 data //
     console.log("Test setup player 1 data");
+    testsRun++;
     player1Validatior.updateValidationFunction(verifyIgnoreResponse);                                                      
     player1.write(new Uint8Array([
     // PD_
@@ -94,19 +99,21 @@ async function runTests() {
     // Emerald Net 0.1.2  
        as("E"), as("m"), as("e"), as("r"), as("a"), as("l"), as("d"), as(" "), as("N"), as("e"), as("t"), as(" "), as("0"), as("."), as("1"), as("."), as("2"), as(" "), as(" "), as(" ")
     ]));
-    await sleep(500); 
+    await sleep(BETWEEN_TEST_DELAY); 
 
     // Test Welcome message player 2
     console.log("Test Welcome message player 2");
+    testsRun++;
     player2Validatior.updateValidationFunction(verifySecondWelcomeMessageResponse);
     player2.write(new Uint8Array([as("W"), as("R"), as("_")]));
-    await sleep(500); 
+    await sleep(BETWEEN_TEST_DELAY); 
 
     // Test setup player 2 data
     console.log("Test setup player 2 data");
+    testsRun++;
     player2Validatior.updateValidationFunction(verifyIgnoreResponse);
     //                                           
-    player1.write(new Uint8Array([
+    player2.write(new Uint8Array([
     // PD_
        as("P"), as("D"), as("_"), 
     // May                                              
@@ -116,56 +123,87 @@ async function runTests() {
     // Emerald Net 0.1.2  
        as("E"), as("m"), as("e"), as("r"), as("a"), as("l"), as("d"), as(" "), as("N"), as("e"), as("t"), as(" "), as("0"), as("."), as("1"), as("."), as("2"), as(" "), as(" "), as(" ")
     ]));
-    await sleep(500); 
+    await sleep(BETWEEN_TEST_DELAY); 
 
     // Test Mart Request
-    // console.log("Test Mart Request");
-    // player1Validatior.updateValidationFunction(verifyMartResponse);
-    // player1.write(new Uint8Array(["M", "A", "_", "1"]));
-    // await sleep(500); 
+    console.log("Test Mart Request");
+    testsRun++;
+    player1Validatior.updateValidationFunction(verifyMartResponse);
+    player1.write(new Uint8Array([as("M"), as("A"), as("_"), as("1")]));
+    await sleep(BETWEEN_TEST_DELAY); 
 
     // Test Gift Egg
-    // console.log("Test Gift Egg");
-    // player1Validatior.updateValidationFunction(verifyEggResponse);
-    // player1.write(new Uint8Array(["G", "E", "_", "1"]));
-    // await sleep(500); 
+    console.log("Test Gift Egg");
+    testsRun++;
+    player1Validatior.updateValidationFunction(verifyEggResponse);
+    player1.write(new Uint8Array([as("G"), as("E"), as("_"), as("1")]));
+    await sleep(BETWEEN_TEST_DELAY); 
+
+    // TODO: EASY_CHAT word bytes are probably wrong an need checking
 
     // Test Post message without friend key
-    // console.log("Test Post message without friend key");
-    // player1Validatior.updateValidationFunction(verifyPostMessageNoFriendKeyResponse);
-    // player1.write(new Uint8Array(["P", "M", "_", "0"]));
-    // await sleep(500); 
+    console.log("Test Post message without friend key");
+    testsRun++;
+    player1Validatior.updateValidationFunction(verifyPostMessageNoFriendKeyResponse);
+    player1.write(new Uint8Array([as("P"), as("M"), as("_"), as("0"),
+    // Blank Friend code 
+       0x00, 0x00, 0x00, 0x00,
+    // [ EC_RED  ] [EC_GREEN ] [ EC_GOLD ] [ EC_LEAF]
+       0x13, 0x02, 0x14, 0x02, 0x17, 0x02, 0x18, 0x02  
+    ]));
+    await sleep(BETWEEN_TEST_DELAY); 
 
     // Test read message without friend key
-    // console.log("Test read message without friend key");
-    // player2Validatior.updateValidationFunction(verifyReadMessageNoFriendKeyResponse);
-    // player2.write(new Uint8Array(["R", "M", "_", "0"]));
-    // await sleep(500); 
+    console.log("Test read message without friend key");
+    testsRun++;
+    player2Validatior.updateValidationFunction(verifyReadMessageNoFriendKeyResponse);
+    player2.write(new Uint8Array([as("R"), as("M"), as("_"), as("0")]));
+    await sleep(BETWEEN_TEST_DELAY); 
+
+    // Test Read message no new messages
+    console.log("Test read message when no new messages");
+    testsRun++;
+    player2Validatior.updateValidationFunction(verifyReadMessageNoNewMessage);
+    player2.write(new Uint8Array([as("R"), as("M"), as("_"), as("0")]));
+    await sleep(BETWEEN_TEST_DELAY); 
 
     // Test Post message with friend key
-    // console.log("Test Post message with friend key");
-    // player1Validatior.updateValidationFunction(verifyPostMessageFriendKeyResponse);
-    // player1.write(new Uint8Array(["P", "M", "_", "1"]));
-    // await sleep(500); 
+    console.log("Test Post message with friend key");
+    testsRun++;
+    player1Validatior.updateValidationFunction(verifyPostMessageFriendKeyResponse);
+    player1.write(new Uint8Array([as("P"), as("M"), as("_"), as("1"),
+    // 50,0,50,0 Friend code 
+       0x50, 0x00, 0x50, 0x00,
+    // [ EC_RED  ] [EC_GREEN ] [ EC_GOLD ] [ EC_LEAF]
+       0x13, 0x02, 0x14, 0x02, 0x17, 0x02, 0x18, 0x02  
+    ]));
+    await sleep(500); 
 
     // Test read message with friend key
-    // console.log("Test read message with friend key");
-    // player2Validatior.updateValidationFunction(verifyReadMessageFriendKeyResponse);
-    // player2.write(new Uint8Array(["R", "M", "_", "1"]));
-    // await sleep(500); 
+    console.log("Test read message with friend key");
+    testsRun++;
+    player2Validatior.updateValidationFunction(verifyReadMessageFriendKeyResponse);
+    player2.write(new Uint8Array([as("R"), as("M"), as("_"), as("1"),
+    // 50,0,50,0 Friend code 
+       0x50, 0x00, 0x50, 0x00,
+    ]));
+    await sleep(500); 
 
     // Test Download Battle
     // console.log("UNIMPLEMENTED: Test Download Battle");
+    // testsRun++;
     // TODO: implement me
     // await sleep(500); 
 
     // Test trade without friend key
     // console.log("UNIMPLEMENTED: Test trade without friend key");
+    // testsRun++;
     // TODO: implement me
     // await sleep(500); 
 
     // Test trade with friend key
     // console.log("UNIMPLEMENTED: Test trade with friend key");
+    // testsRun++;
     // TODO: implement me
     // await sleep(500); 
 
@@ -175,6 +213,13 @@ async function runTests() {
     console.log("=====================================");
     console.log("Pass Count:" + (player1Validatior.passCount + player2Validatior.passCount));
     console.log("Fail Count:" + (player1Validatior.failCount + player2Validatior.failCount));
+
+    if (testsRun - (player1Validatior.passCount + player2Validatior.passCount + player1Validatior.failCount + player2Validatior.failCount) > 0) {
+        console.log("\nWARNING - Some tests did not finish");   
+    } else {
+        console.log("\nAll tests have finished");
+    }
+
     console.log("\n");
 
     player1.destroy();
@@ -227,34 +272,98 @@ function verifySecondWelcomeMessageResponse(data) {
 }
 
 function verifyMartResponse(data) {
+    let expected = [
+        //  MESSAGE_TYPE, MESSAGE_OFFSET, MESSAGE_LENGTH_BYTE_1, MESSAGE_LENGTH_BYTE_2, ASCII_UNDERSCORE 
+            0x25, 0xf0, 0x00, 0x10, 0x5f,
+        //  [B JUICE ]  [ENIGMA   ] [MYSTIC T ]  [EON T   ]  [AURORA T]  [OLDSEA MP]  
+            0x2C, 0x00, 0xAF, 0x00, 0x72, 0x01,  0x13, 0x01, 0x73, 0x01, 0x78, 0x01];
+    return assertTrue(() => compHex(data, expected),
+    'Mart Message Correct Response',
+    'Mart Message Response Failed \n Expected: ' + toHexString(expected) + "\n Actual: " + toHexString(data)); 
 }
 
 function verifyEggResponse(data) {
+    let expected = [
+        //  MESSAGE_TYPE, MESSAGE_OFFSET, MESSAGE_LENGTH_BYTE_1, MESSAGE_LENGTH_BYTE_2, ASCII_UNDERSCORE 
+            0x25, 0xf0, 0x00, 0x04, 0x5f,
+        //  [ PICHU   ] [ SURF    ]
+            0xAC, 0x00, 0x39, 0x00];
+    return assertTrue(() => compHex(data, expected),
+    'Egg Message Correct Response',
+    'Egg Message Response Failed \n Expected: ' + toHexString(expected) + "\n Actual: " + toHexString(data)); 
 }
 
 function verifyPostMessageNoFriendKeyResponse(data) {
+    let expected = [
+        //  MESSAGE_TYPE, MESSAGE_OFFSET, MESSAGE_LENGTH_BYTE_1, MESSAGE_LENGTH_BYTE_2, ASCII_UNDERSCORE 
+            0x25, 0xf0, 0x00, 0x02, 0x5f,
+        //  200  [No FC]
+            0xC8, 0x00];
+    return assertTrue(() => compHex(data, expected),
+    'Post Mail No FC Message Correct Response',
+    'Post Mail No FC Message Response Failed \n Expected: ' + toHexString(expected) + "\n Actual: " + toHexString(data)); 
 }
 
 function verifyReadMessageNoFriendKeyResponse(data) {
+    let expected = [
+        //  MESSAGE_TYPE, MESSAGE_OFFSET, MESSAGE_LENGTH_BYTE_1, MESSAGE_LENGTH_BYTE_2, ASCII_UNDERSCORE 
+            0x25, 0xf0, 0x00, 0x10, 0x5f,
+        // B     r     a     n     d     o     n     END
+           0xBC, 0xE6, 0xD5, 0xE2, 0xD8, 0xE3, 0xE2, 0xFF,
+        // [ EC_RED  ] [EC_GREEN ] [ EC_GOLD ] [ EC_LEAF ]
+           0x13, 0x02, 0x14, 0x02, 0x17, 0x02, 0x18, 0x02];
+    return assertTrue(() => compHex(data, expected),
+    'Read Mail No FC Message Correct Response',
+    'Read Mail No FC Message Response Failed \n Expected: ' + toHexString(expected) + "\n Actual: " + toHexString(data)); 
 }
 
+function verifyReadMessageNoNewMessage(data) {
+    let expected = [
+        //  MESSAGE_TYPE, MESSAGE_OFFSET, MESSAGE_LENGTH_BYTE_1, MESSAGE_LENGTH_BYTE_2, ASCII_UNDERSCORE, NULL, NULL 
+            0x25, 0xf0, 0x00, 0x02, 0x5f, 0xFF, 0xFF];
+    return assertTrue(() => compHex(data, expected),
+    'Read Mail No New Message Correct Response',
+    'Read Mail No New Message Response Failed \n Expected: ' + toHexString(expected) + "\n Actual: " + toHexString(data)); 
+}
 
 function verifyPostMessageFriendKeyResponse(data) {
+    let expected = [
+        //  MESSAGE_TYPE, MESSAGE_OFFSET, MESSAGE_LENGTH_BYTE_1, MESSAGE_LENGTH_BYTE_2, ASCII_UNDERSCORE 
+            0x25, 0xf0, 0x00, 0x02, 0x5f,
+        //  200  [With FC]
+            0xC8, 0x01];
+    return assertTrue(() => compHex(data, expected),
+    'Post Mail With FC Message Correct Response',
+    'Post Mail With FC Message Response Failed \n Expected: ' + toHexString(expected) + "\n Actual: " + toHexString(data)); 
 }
 
 function verifyReadMessageFriendKeyResponse(data) {
+    let expected = [
+        //  MESSAGE_TYPE, MESSAGE_OFFSET, MESSAGE_LENGTH_BYTE_1, MESSAGE_LENGTH_BYTE_2, ASCII_UNDERSCORE 
+            0x25, 0xf0, 0x00, 0x10, 0x5f,
+        // B     r     a     n     d     o     n     END
+           0xBC, 0xE6, 0xD5, 0xE2, 0xD8, 0xE3, 0xE2, 0xFF,
+        // [ EC_RED  ] [EC_GREEN ] [ EC_GOLD ] [ EC_LEAF ]
+           0x13, 0x02, 0x14, 0x02, 0x17, 0x02, 0x18, 0x02];
+    return assertTrue(() => compHex(data, expected),
+    'Read Mail With FC Message Correct Response',
+    'Read Mail With FC Message Response Failed \n Expected: ' + toHexString(expected) + "\n Actual: " + toHexString(data)); 
 }
 
 function verifyDownloadBattleResponse(data) {
+    throw new Error("unimplemented method");
 }
 
 function verifyTradeNoFriendKeyPlayer1Response(data) {
+    throw new Error("unimplemented method");
 }
 
 function verifyTradeNoFriendKeyPlayer2Response(data) {
+    throw new Error("unimplemented method");
 }
 
 function verifyTradeFriendKeyPlayer1Response(data) {
+    throw new Error("unimplemented method");
 }
 
 function assertTrue(predicate, successMessage, failMessage) {
