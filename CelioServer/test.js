@@ -148,8 +148,8 @@ async function runTests() {
     player1.write(new Uint8Array([as("P"), as("M"), as("_"), as("0"),
     // Blank Friend code 
        0x00, 0x00, 0x00, 0x00,
-    // [ EC_RED  ] [EC_GREEN ] [ EC_GOLD ] [ EC_LEAF]
-       0x13, 0x02, 0x14, 0x02, 0x17, 0x02, 0x18, 0x02  
+    // [ EC_RED  ] [EC_GREEN ] [ EC_GOLD ] [ EC_LEAF]  [ EC_LEAF]  [ EC_LEAF]  [ EC_LEAF]  [ EC_LEAF]  [ EC_LEAF]
+       0x13, 0x02, 0x14, 0x02, 0x17, 0x02, 0x18, 0x02, 0x18, 0x02, 0x18, 0x02, 0x18, 0x02, 0x18, 0x02, 0x18, 0x02  
     ]));
     await sleep(BETWEEN_TEST_DELAY); 
 
@@ -174,8 +174,8 @@ async function runTests() {
     player1.write(new Uint8Array([as("P"), as("M"), as("_"), as("1"),
     // 50,0,50,0 Friend code 
        0x50, 0x00, 0x50, 0x00,
-    // [ EC_RED  ] [EC_GREEN ] [ EC_GOLD ] [ EC_LEAF]
-       0x13, 0x02, 0x14, 0x02, 0x17, 0x02, 0x18, 0x02  
+    // [ EC_RED  ] [EC_GREEN ] [ EC_GOLD ] [ EC_LEAF]  [ EC_LEAF]  [ EC_LEAF]  [ EC_LEAF]  [ EC_LEAF]  [ EC_LEAF]
+       0x13, 0x02, 0x14, 0x02, 0x17, 0x02, 0x18, 0x02, 0x18, 0x02, 0x18, 0x02, 0x18, 0x02, 0x18, 0x02, 0x18, 0x02  
     ]));
     await sleep(500); 
 
@@ -190,10 +190,11 @@ async function runTests() {
     await sleep(500); 
 
     // Test Download Battle
-    // console.log("UNIMPLEMENTED: Test Download Battle");
-    // testsRun++;
-    // TODO: implement me
-    // await sleep(500); 
+    console.log("Test Download Battle");
+    testsRun++;
+    player1Validatior.updateValidationFunction(verifyDownloadBattleResponse);
+    player1.write(new Uint8Array([as("B"), as("A"), as("_"), as("1")]));
+    await sleep(500); 
 
     // Test trade without friend key
     // console.log("UNIMPLEMENTED: Test trade without friend key");
@@ -307,11 +308,11 @@ function verifyPostMessageNoFriendKeyResponse(data) {
 function verifyReadMessageNoFriendKeyResponse(data) {
     let expected = [
         //  MESSAGE_TYPE, MESSAGE_OFFSET, MESSAGE_LENGTH_BYTE_1, MESSAGE_LENGTH_BYTE_2, ASCII_UNDERSCORE 
-            0x25, 0xf0, 0x00, 0x10, 0x5f,
+            0x25, 0xf0, 0x00, 0x1a, 0x5f,
         // B     r     a     n     d     o     n     END
            0xBC, 0xE6, 0xD5, 0xE2, 0xD8, 0xE3, 0xE2, 0xFF,
-        // [ EC_RED  ] [EC_GREEN ] [ EC_GOLD ] [ EC_LEAF ]
-           0x13, 0x02, 0x14, 0x02, 0x17, 0x02, 0x18, 0x02];
+        // [ EC_RED  ] [EC_GREEN ] [ EC_GOLD ] [ EC_LEAF]  [ EC_LEAF]  [ EC_LEAF]  [ EC_LEAF]  [ EC_LEAF]  [ EC_LEAF]
+           0x13, 0x02, 0x14, 0x02, 0x17, 0x02, 0x18, 0x02, 0x18, 0x02, 0x18, 0x02, 0x18, 0x02, 0x18, 0x02, 0x18, 0x02];
     return assertTrue(() => compHex(data, expected),
     'Read Mail No FC Message Correct Response',
     'Read Mail No FC Message Response Failed \n Expected: ' + toHexString(expected) + "\n Actual: " + toHexString(data)); 
@@ -340,18 +341,29 @@ function verifyPostMessageFriendKeyResponse(data) {
 function verifyReadMessageFriendKeyResponse(data) {
     let expected = [
         //  MESSAGE_TYPE, MESSAGE_OFFSET, MESSAGE_LENGTH_BYTE_1, MESSAGE_LENGTH_BYTE_2, ASCII_UNDERSCORE 
-            0x25, 0xf0, 0x00, 0x10, 0x5f,
+            0x25, 0xf0, 0x00, 0x1a, 0x5f,
         // B     r     a     n     d     o     n     END
            0xBC, 0xE6, 0xD5, 0xE2, 0xD8, 0xE3, 0xE2, 0xFF,
-        // [ EC_RED  ] [EC_GREEN ] [ EC_GOLD ] [ EC_LEAF ]
-           0x13, 0x02, 0x14, 0x02, 0x17, 0x02, 0x18, 0x02];
+        // [ EC_RED  ] [EC_GREEN ] [ EC_GOLD ] [ EC_LEAF]  [ EC_LEAF]  [ EC_LEAF]  [ EC_LEAF]  [ EC_LEAF]  [ EC_LEAF]
+           0x13, 0x02, 0x14, 0x02, 0x17, 0x02, 0x18, 0x02, 0x18, 0x02, 0x18, 0x02, 0x18, 0x02, 0x18, 0x02, 0x18, 0x02];
     return assertTrue(() => compHex(data, expected),
     'Read Mail With FC Message Correct Response',
     'Read Mail With FC Message Response Failed \n Expected: ' + toHexString(expected) + "\n Actual: " + toHexString(data)); 
 }
 
 function verifyDownloadBattleResponse(data) {
-    throw new Error("unimplemented method");
+    let expected = [
+        //  MESSAGE_TYPE, MESSAGE_OFFSET, MESSAGE_LENGTH_BYTE_1, MESSAGE_LENGTH_BYTE_2, ASCII_UNDERSCORE 
+            0x25, 0xf0, 0x00, 0x10 * 3, 0x5f,
+        // [ SPECIES ] [LVL] [ ITEM    ] [ MOVE 1  ] [ MOVE 2  ] [ MOVE 3  ] [ MOVE 4  ] [ NICKNAME      ]   
+           0x81, 0x00, 0x0A, 0xC8, 0x00, 0x96, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xBC, 0xE3, 0xD6,
+        // [ SPECIES ] [LVL] [ ITEM    ] [ MOVE 1  ] [ MOVE 2  ] [ MOVE 3  ] [ MOVE 4  ] [ NICKNAME      ]     
+           0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xc4, 0xdd, 0xe1, 
+        // [ SPECIES ] [LVL] [ ITEM    ] [ MOVE 1  ] [ MOVE 2  ] [ MOVE 3  ] [ MOVE 4  ] [ NICKNAME      ]        
+           0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xbb, 0xe1, 0xed];
+    return assertTrue(() => compHex(data, expected),
+    'Download Battle Message Correct Response',
+    'Download Battle Message Response Failed \n Expected: ' + toHexString(expected) + "\n Actual: " + toHexString(data)); 
 }
 
 function verifyTradeNoFriendKeyPlayer1Response(data) {
@@ -381,7 +393,39 @@ function assertTrue(predicate, successMessage, failMessage) {
 }
 
 function compHex(val1, val2) {
-    return JSON.stringify(toHexString(val1)) == JSON.stringify(toHexString(val2));
+    let actual = JSON.stringify(toHexString(val1));
+    let expected = JSON.stringify(toHexString(val2));
+
+    if (actual == expected) {
+        return true;
+    }
+
+    // Lets try and log some info on what went wrong
+    actual = actual.split(",");
+    expected = expected.split(",");
+    
+    if (actual.length != expected.length)
+    {
+        console.log("Actual was %d bytes but expected %d bytes.", actual.length, expected.length);
+    }
+    else {
+        console.log("Responses were the same length %d bytes.", actual.length);
+    }
+
+    let shorterLength = Math.min(actual.length, expected.length);
+    let firstErrorIndex = -1;
+    for (var i = 0; i < shorterLength && firstErrorIndex == -1; i++) {
+        if (actual[i] != expected[i]) 
+            firstErrorIndex = i;
+    }
+
+    if (firstErrorIndex == -1) {
+        console.log("The section of the response that was returned had the expected valuesm, but the length)");
+    } else {
+        console.log("First error at position %d expected %s but was %s", firstErrorIndex, expected[firstErrorIndex], actual[firstErrorIndex]);
+    }
+
+    return false;
 }
 
 function toHexString(val) {

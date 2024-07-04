@@ -20,6 +20,9 @@
 #include "constants/items.h"
 #include "field_message_box.h"
 #include "easy_chat.h"
+#include "mail.h"
+#include "item_menu.h"
+#include "overworld.h"
 
 // Player name + 1 + Gender + Special Warp Flag + Trainer ID)
 #define PLAYER_INFO_LENGTH (PLAYER_NAME_LENGTH + 1 + 1 + 1 + TRAINER_ID_LENGTH)
@@ -27,7 +30,7 @@
 #define WELCOME_MSG_LENGTH 48
 
 #define NET_GAME_NAME_LENGTH 20
-static const u8 sNetGameName[] = _("Emerald Net Demo 0.1.2");
+static const u8 sNetGameName[] = _("Emerald Net 0.1.3   ");
 
 #define NET_SERVER_ADDR_LENGTH 14
 static const u8 sNetServerAddr[] = _("127.0.0.1:9000");
@@ -91,6 +94,18 @@ static void Task_EndTradeConnection(u8 taskId);
 // NET_CONN_RETRY_TRADE_FUNC
 static void SetupRetryTradeTask();
 
+// NET_CONN_POST_MAIL
+static void SetupForPostMailTask();
+static void Task_PostMailCancel(u8 taskId);
+static void Task_PostMailProcess(u8 taskId);
+static void Task_EndPostMailConnection(u8 taskId);
+
+// NET_CONN_READ_MAIL
+static void SetupForReadMailTask();
+static void Task_ReadMailCancel(u8 taskId);
+static void Task_ReadMailProcess(u8 taskId);
+static void Task_EndReadMailConnection(u8 taskId);
+
 static void DoTransferDataBlock(u8 taskId);
 static void DoReceiveDataBlock(u8 taskId);
 
@@ -144,7 +159,9 @@ static void (* const sNetConnFunctions[])(void) =
     [NET_CONN_START_MART_FUNC]    = SetupForOnlineMartTask,
     [NET_CONN_START_EGG_FUNC]     = SetupForGiftEggTask,
     [NET_CONN_TRADE_FUNC]         = SetupForTradeTask,
-    [NET_CONN_RETRY_TRADE_FUNC]   = SetupRetryTradeTask
+    [NET_CONN_RETRY_TRADE_FUNC]   = SetupRetryTradeTask,
+    [NET_CONN_POST_MAIL]          = SetupForPostMailTask,
+    [NET_CONN_READ_MAIL]          = SetupForReadMailTask
 };
 
 void CallNetworkFunction(void)
@@ -1087,6 +1104,280 @@ static void Task_TradeProcess(u8 taskId)
 }
 
 static void Task_EndTradeConnection(u8 taskId) 
+{
+    NetConnDisableSerial();
+    StopFieldMessage();
+    ScriptContext_Enable();
+    DestroyTask(taskId);
+}
+
+/**
+*   =====================================================================
+*   === NET_CONN_POST_MAIL                                            ===
+*   =====================================================================
+*/
+enum {
+    POST_MAIL_SEND_REQUEST = 0,
+    POST_MAIL_TRANSMIT_REQUEST,
+    POST_MAIL_WAIT_FOR_SERVER,
+    POST_MAIL_RECEIVE_DATA,
+    POST_MAIL_FINISH
+};
+
+static void SetupForPostMailTask()
+{
+    sSendRecvMgr.allowCancel       = TRUE;
+    sSendRecvMgr.retriesLeft       = MAX_CONNECTION_RETRIES;
+    sSendRecvMgr.onFinish          = Task_EndPostMailConnection;
+    sSendRecvMgr.onCancel          = Task_PostMailCancel;
+    sSendRecvMgr.onProcess         = Task_PostMailProcess;
+    sSendRecvMgr.nextProcessStep   = POST_MAIL_SEND_REQUEST;
+    sSendRecvMgr.disableChecks     = FALSE;
+    sSendRecvMgr.repeatedStepCount = 0;
+    gSpecialVar_0x8003 = 0;
+}
+
+static void Task_PostMailCancel(u8 taskId)
+{
+    Task_EndLinkupConnection(taskId);
+}
+
+static void Task_PostMailProcess(u8 taskId)
+{
+    switch (sSendRecvMgr.nextProcessStep)
+    {
+        case POST_MAIL_SEND_REQUEST:
+        {
+            u32 i;
+            u8 mailId;
+            bool8 useFriendLink = TRUE;
+            gStringVar3[0] = 'P'; gStringVar3[1] = 'M'; gStringVar3[2] = '_';
+
+            for (i = 0; i < ARRAY_COUNT(sLinkProfileWords); i++)
+                useFriendLink = useFriendLink && gSaveBlock1Ptr->easyChatProfile[i] == sLinkProfileWords[i];
+
+            if (useFriendLink)
+            {
+                gStringVar3[3] = '1';
+                gStringVar3[4] = gSaveBlock1Ptr->easyChatProfile[2] >> 8;
+                gStringVar3[5] = gSaveBlock1Ptr->easyChatProfile[2] & 0xFF;
+                gStringVar3[6] = gSaveBlock1Ptr->easyChatProfile[3] >> 8;
+                gStringVar3[7] = gSaveBlock1Ptr->easyChatProfile[3] & 0xFF;
+            }
+            else
+            {
+                gStringVar3[3] = '0';
+            }
+
+            mailId = GetMonData(&gPlayerParty[gSpecialVar_0x8005], MON_DATA_MAIL);
+
+            if (mailId == MAIL_NONE)
+            {
+                gSpecialVar_0x8003 = 1;
+                sSendRecvMgr.state = NET_CONN_STATE_DONE;
+            }
+            else 
+            {
+                for (i = 0; i < MAIL_COUNT; i++)
+                {
+                    gStringVar3[8 + i] = gSaveBlock1Ptr->mail[mailId].words[i] >> 8;
+                    gStringVar3[8 + i + 1] = gSaveBlock1Ptr->mail[mailId].words[i + 1] & 0xFF;
+                }
+
+                configureSendRecvMgrChunked(NET_CONN_SCH2_REQ, (vu32 *) &gStringVar3[0], 8 + (2* 9), NET_CONN_STATE_SEND, POST_MAIL_TRANSMIT_REQUEST, MINIMUM_CHUNK_SIZE);
+            }
+
+            break;
+        }
+        case POST_MAIL_TRANSMIT_REQUEST:
+            sSendRecvMgr.disableChecks = TRUE; 
+            sSendRecvMgr.retryPoint = POST_MAIL_TRANSMIT_REQUEST;
+            CpuFill32(0, &gStringVar3, sizeof(gStringVar3)); 
+            configureSendRecvMgr(NET_CONN_TCH2_REQ, 0, 8 + (2* 9), NET_CONN_STATE_SEND, POST_MAIL_WAIT_FOR_SERVER);
+            break;
+
+        case POST_MAIL_WAIT_FOR_SERVER:
+            if (DoWaitTextAnimation(40, sWaitingMessage) > 0)
+                sSendRecvMgr.nextProcessStep = POST_MAIL_RECEIVE_DATA;
+            break;
+
+        case POST_MAIL_RECEIVE_DATA:
+            sSendRecvMgr.disableChecks = FALSE;
+            if (sSendRecvMgr.repeatedStepCount == 0)
+            {
+                sSendRecvMgr.retryPoint = POST_MAIL_RECEIVE_DATA;
+            }
+            configureSendRecvMgrChunked(NET_CONN_RCHF0_REQ, (vu32 *) &gStringVar3[0], 2, NET_CONN_STATE_RECEIVE, POST_MAIL_FINISH, MINIMUM_CHUNK_SIZE);
+            break;
+
+        case POST_MAIL_FINISH:
+        default:
+        {
+            u32 i;
+            gSpecialVar_0x8003 = 2;
+            if (gStringVar3[0] != 200)
+            {
+                gSpecialVar_0x8003 = 0;
+            }
+            sSendRecvMgr.state = NET_CONN_STATE_DONE;
+            break;
+        }
+
+    }
+
+    gTasks[taskId].func = Task_NetworkTaskLoop;
+}
+
+static void Task_EndPostMailConnection(u8 taskId) 
+{
+    NetConnDisableSerial();
+    StopFieldMessage();
+    ScriptContext_Enable();
+    DestroyTask(taskId);
+}
+
+/**
+*   =====================================================================
+*   === NET_CONN_READ_MAIL                                            ===
+*   =====================================================================
+*/
+enum {
+    READ_MAIL_CLEAR_LAST_MESSAGE = 0,
+    READ_MAIL_SEND_REQUEST,
+    READ_MAIL_TRANSMIT_REQUEST,
+    READ_MAIL_WAIT_FOR_SERVER,
+    READ_MAIL_RECEIVE_DATA,
+    READ_MAIL_FINISH
+};
+
+static void SetupForReadMailTask()
+{
+    sSendRecvMgr.allowCancel       = TRUE;
+    sSendRecvMgr.retriesLeft       = MAX_CONNECTION_RETRIES;
+    sSendRecvMgr.onFinish          = Task_EndReadMailConnection;
+    sSendRecvMgr.onCancel          = Task_ReadMailCancel;
+    sSendRecvMgr.onProcess         = Task_ReadMailProcess;
+    sSendRecvMgr.nextProcessStep   = READ_MAIL_CLEAR_LAST_MESSAGE;
+    sSendRecvMgr.disableChecks     = FALSE;
+    sSendRecvMgr.repeatedStepCount = 0;
+    gSpecialVar_0x8003 = 0;
+}
+
+static void Task_ReadMailCancel(u8 taskId)
+{
+    Task_EndLinkupConnection(taskId);
+}
+
+static void Task_ReadMailProcess(u8 taskId)
+{
+    switch (sSendRecvMgr.nextProcessStep)
+    {
+        case READ_MAIL_CLEAR_LAST_MESSAGE:
+            gStringVar3[0] = 0; gStringVar3[1] = 0; gStringVar3[2] = 0; gStringVar3[3] = 0;
+            configureSendRecvMgr(0x15F0, (vu32 *) &gStringVar3[0], 4, NET_CONN_STATE_SEND, READ_MAIL_SEND_REQUEST);
+            break;
+        case READ_MAIL_SEND_REQUEST:
+        {
+            u32 i;
+            bool8 useFriendLink = TRUE;
+            gStringVar3[0] = 'R'; gStringVar3[1] = 'M'; gStringVar3[2] = '_';
+
+            // If the trainer profile starts with 'FRIEND LINK' 
+
+            for (i = 0; i < ARRAY_COUNT(sLinkProfileWords); i++)
+                useFriendLink = useFriendLink && gSaveBlock1Ptr->easyChatProfile[i] == sLinkProfileWords[i];
+
+            if (useFriendLink)
+            {
+                gStringVar3[3] = '1';
+                gStringVar3[4] = gSaveBlock1Ptr->easyChatProfile[2] >> 8;
+                gStringVar3[5] = gSaveBlock1Ptr->easyChatProfile[2] & 0xFF;
+                gStringVar3[6] = gSaveBlock1Ptr->easyChatProfile[3] >> 8;
+                gStringVar3[7] = gSaveBlock1Ptr->easyChatProfile[3] & 0xFF;
+
+                configureSendRecvMgrChunked(NET_CONN_SCH2_REQ, (vu32 *) &gStringVar3[0], 8, NET_CONN_STATE_SEND, READ_MAIL_TRANSMIT_REQUEST, MINIMUM_CHUNK_SIZE);
+            }
+            else
+            {
+                gStringVar3[3] = '0';
+                configureSendRecvMgr(NET_CONN_SCH2_REQ, (vu32 *) &gStringVar3[0], 4, NET_CONN_STATE_SEND, READ_MAIL_TRANSMIT_REQUEST);
+            }
+            break;
+        }
+        case READ_MAIL_TRANSMIT_REQUEST:
+            sSendRecvMgr.disableChecks = TRUE; 
+            sSendRecvMgr.retryPoint = DOWNLOAD_MART_TRANSMIT_REQUEST;
+            CpuFill32(0, &gStringVar3, sizeof(gStringVar3)); 
+            configureSendRecvMgr(NET_CONN_TCH2_REQ, 0, 4, NET_CONN_STATE_SEND, READ_MAIL_WAIT_FOR_SERVER);
+            break;
+
+        case READ_MAIL_WAIT_FOR_SERVER:
+            if (DoWaitTextAnimation(40, sWaitingMessage) > 0)
+                sSendRecvMgr.nextProcessStep = READ_MAIL_RECEIVE_DATA;
+            break;
+
+        case READ_MAIL_RECEIVE_DATA:
+            sSendRecvMgr.disableChecks = FALSE;
+            if (sSendRecvMgr.repeatedStepCount == 0)
+            {
+                sSendRecvMgr.retryPoint = DOWNLOAD_MART_RECEIVE_DATA;
+            }
+            // 8 byte player name + 9 * 16-bit easy chat words
+            configureSendRecvMgrChunked(NET_CONN_RCHF0_REQ, (vu32 *) &gStringVar3[0], 8 + (9 * 2), NET_CONN_STATE_RECEIVE, READ_MAIL_FINISH, MINIMUM_CHUNK_SIZE);
+            break;
+
+        case READ_MAIL_FINISH:
+        default:
+        {
+            u32 i;
+            struct Mail mail;
+
+            if (gStringVar3[0] == 0 && gStringVar3[1] == 0)
+            {
+                // gSpecialVar_0x8003 = 0 - Connection Error
+                gSpecialVar_0x8003 = 0;
+            } 
+            else if (gStringVar3[0] == 0xFF && gStringVar3[1] == 0xFF)
+            {
+                // gSpecialVar_0x8003 = 1 - No New Mail
+                gSpecialVar_0x8003 = 1;
+            }
+            else 
+            {
+                // gSpecialVar_0x8003 = 2 - New Mail Message
+
+                // /*0x00*/ u16 words[MAIL_WORDS_COUNT];
+                // /*0x12*/ u8 playerName[PLAYER_NAME_LENGTH + 1];
+                // /*0x1A*/ u8 trainerId[TRAINER_ID_LENGTH];
+                // /*0x1E*/ u16 species;
+                // /*0x20*/ u16 itemId;
+                gSpecialVar_0x8003 = 2;
+
+                for (i = 0; i < MAIL_COUNT; i++)
+                {
+                    mail.words[i] = gStringVar3[8 + i] >> 8;
+                    mail.words[i + 1] = gStringVar3[8 + i + 1] & 0xFF;
+                }
+
+                for (i = 0; i < PLAYER_NAME_LENGTH; i++)
+                    mail.playerName[i] = gStringVar3[i];
+                    
+                mail.itemId = gSpecialVar_ItemId;
+                mail.species = SPECIES_UNOWN_EMARK;
+                ReadMail(&mail, CB2_ReturnToField, TRUE);
+
+            }
+
+            sSendRecvMgr.state = NET_CONN_STATE_DONE;
+            break;
+        }
+
+    }
+
+    gTasks[taskId].func = Task_NetworkTaskLoop;
+}
+
+static void Task_EndReadMailConnection(u8 taskId) 
 {
     NetConnDisableSerial();
     StopFieldMessage();

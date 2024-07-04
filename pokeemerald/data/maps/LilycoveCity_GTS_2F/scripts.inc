@@ -125,6 +125,50 @@ LilycoveCity_GTS_F2_EventScript_NetEgg::
 	releaseall
 	end
 
+LilycoveCity_GTS_F2_EventScript_MailMan::
+	lock
+	faceplayer
+	message LilycoveCity_GTS_F2_Text_MailMan
+	waitmessage
+	multichoicedefault 20, 8, MULTI_NET_MAIL, 2, FALSE
+	switch VAR_RESULT
+	case 0, LilycoveCity_GTS_F2_EventScript_PostMail
+	case 1, LilycoveCity_GTS_F2_EventScript_ReadMail
+	case 2, LilycoveCity_GTS_F2_EventScript_CloseMail
+	case MULTI_B_PRESSED, LilycoveCity_GTS_F2_EventScript_CloseMail
+	end
+
+LilycoveCity_GTS_F2_EventScript_PostMail::
+	message LilycoveCity_GTS_F2_Text_SelectMailMon
+	waitbuttonpress
+	special ChoosePartyMon
+	waitstate
+	copyvar VAR_0x8005, VAR_0x8004
+	goto_if_eq VAR_0x8005, PARTY_NOTHING_CHOSEN, LilycoveCity_GTS_F2_EventScript_CloseMail
+	setvar VAR_0x8004, NET_CONN_POST_MAIL
+	special CallNetworkFunction
+	waitstate
+	goto_if_eq VAR_0x8003, 0, LilycoveCity_GTS_F2_EventScript_ConnectionEnded
+	goto_if_eq VAR_0x8003, 1, LilycoveCity_GTS_F2_EventScript_MonHadNoMail
+	message LilycoveCity_GTS_F2_Text_MailSent
+	waitmessage
+	releaseall
+	end
+
+LilycoveCity_GTS_F2_EventScript_ReadMail::
+	setvar VAR_0x8004, NET_CONN_READ_MAIL
+	special CallNetworkFunction
+	waitstate
+	goto_if_eq VAR_0x8003, 0, LilycoveCity_GTS_F2_EventScript_ConnectionEnded
+	goto_if_eq VAR_0x8003, 1, LilycoveCity_GTS_F2_Text_NoMailFound
+	releaseall
+	end
+
+LilycoveCity_GTS_F2_EventScript_CloseMail::
+	closemessage
+	releaseall
+	end
+
 LilycoveCity_GTS_F2_EventScript_NetEgg_No_Special_Move::
 	closemessage
 	releaseall
@@ -157,6 +201,16 @@ LilycoveCity_GTS_F2_EventScript_NoRoomForEgg::
 	release
 	end
 
+LilycoveCity_GTS_F2_EventScript_MonHadNoMail::
+	msgbox LilycoveCity_GTS_F2_Text_MonHadNoMail, MSGBOX_DEFAULT
+	release
+	end
+
+LilycoveCity_GTS_F2_EventScript_NoMailFound::
+	msgbox LilycoveCity_GTS_F2_Text_NoMailFound, MSGBOX_DEFAULT
+	release
+	end
+
 LilycoveCity_GTS_F2_Text_NotAvailable::
 	.string "This feature is not yet available.$"
 
@@ -182,7 +236,7 @@ LilycoveCity_GTS_F2_Text_AlreadyObtained::
 	.string "It seems you have already obtained\n"
 	.string "this gift egg before.$"
 
-LilycoveCity_GTS_F2_Text_NoRoomForThisEgg:
+LilycoveCity_GTS_F2_Text_NoRoomForThisEgg::
 	.string "Oh? You've too many POKéMON.\n"
 	.string "There's no room for this EGG…$"
 
@@ -193,6 +247,27 @@ LilycoveCity_GTS_F2_Text_StartDownloadEgg::
 LilycoveCity_GTS_F2_Text_StartDownloadBattle::
 	.string "Do you want to start the download\n"
 	.string "battle?$"
+
+LilycoveCity_GTS_F2_Text_MailMan::	
+	.string "Welcome to the mail service!\p"
+	.string "How may I serve you?$"
+
+LilycoveCity_GTS_F2_Text_SelectMailMon::
+	.string "Please select a POKéMON whose mail\n"
+	.string "you wish to send.$"
+
+LilycoveCity_GTS_F2_Text_MailSent::
+	.string "Your mail has been sent!\p"
+	.string "Thank you for using the mail service.\n"
+	.string "We hope to see you again soon.$"
+
+LilycoveCity_GTS_F2_Text_MonHadNoMail::
+    .string "Oh… I'm sorry…\p"
+	.string "That POKéMON doesn't appear to be\n" 
+	.string "holding any mail...$"
+
+LilycoveCity_GTS_F2_Text_NoMailFound::
+	.string "No new mail was found.$"
 
 LilycoveCity_GTS_F2_Text_StartDownloadMart::
 	.string "Do you want to start the online mart?$"

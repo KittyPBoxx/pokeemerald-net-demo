@@ -60,17 +60,14 @@ class TcpRequestHelper {
             conn.gender     = dataArray[8 + 2] == 1 ? "GIRL" : "BOY";
             conn.game       = [...dataArray.subarray(8 + 2 + 1, data.length)].map(c => String.fromCharCode(c) == "\x00" ? "" : String.fromCharCode(c)).join("");
             conn.id         = conn.name + conn.trainerId + conn.gender + conn.game + conn.remoteAddress;
-          
-            conn.lastSentMail = "";
-            conn.unreadMail = [];
-
+            conn.mail       = null;
+        
             requestHandler.clientList.set(conn.id, {"name"         : conn.name, 
                                                     "id"           : conn.id,
                                                     "trainerId"    : conn.trainerId,
                                                     "gender"       : conn.gender,
                                                     "game"         : conn.game, 
-                                                    "lastSentMail" : conn.lastSentMail,
-                                                    "unreadMail"   : conn.unreadMail,
+                                                    "mail"         : conn.mail,
                                                     "tradeState"   : TRADING_STATE_NONE});
           
             LOG.log('GAME: %s | PLAYER: %s | GENDER: %s | TRAINER_ID %s', conn.game, conn.name, conn.gender, conn.trainerId);
@@ -123,7 +120,7 @@ class TcpRequestHelper {
                 "sentTime" : Date.now(),
                 "friendKey": friendKey,
                 "name": clientList.get(conn.id).name,
-                "message": data.slice(5, 5 + (2 * 4)) // 4, 2 Byte easy chat words
+                "message": data.slice(5, 5 + (2 * 9)) // 4, 2 Byte easy chat words
             }
 
             sendMessage(conn, new Message(0xF0, 0x2, new Uint8Array([200, isUsingFriendCode ? 1 : 0])));
@@ -146,7 +143,15 @@ class TcpRequestHelper {
                 lastMailCheckTime = new Date(null);
             }
 
-
+            var modMail = clientList.get(conn.id).modMail;
+            if (modMail) {
+                var mailHex = new Uint8Array(8 + (2 * 9));
+                mailHex.set(new Uint8Array(StringHelper.convertMessageToHex("ADMIN")), 0);
+                mailHex.set(modMail, 8);
+                sendMessage(conn, new Message(0xF0, 8 + (2 * 9), mailHex)); 
+                clientList.get(conn.id).modMail = null; 
+                return;
+            }
 
             let nextMessage = [...clientList.values()].map(c => c.mail)
                                                       .filter(m => !!m)
@@ -160,11 +165,11 @@ class TcpRequestHelper {
             if (nextMessage) {
 
                 clientList.get(conn.id).lastMailCheckTime = nextMessage.sentTime;
-                var mailHex = new Uint8Array(8 + 2 + 2 + 2 + 2); // Player name + 4 easy chat words
+                var mailHex = new Uint8Array(8 + (2 * 9)); // Player name + 9 easy chat words
                 mailHex.set(new Uint8Array(StringHelper.convertMessageToHex(nextMessage.name)), 0);
                 mailHex.set(nextMessage.message, 8);
                 
-                sendMessage(conn, new Message(0xF0, 8 + 2 + 2 + 2 + 2, mailHex)); 
+                sendMessage(conn, new Message(0xF0, 8 + (2 * 9), mailHex)); 
 
             } else  {
                 sendMessage(conn, new Message(0xF0, 0x2, new Uint8Array([0xFF, 0xFF]))); // No new messages

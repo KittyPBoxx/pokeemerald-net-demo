@@ -20,6 +20,7 @@
                 <th>Game</th>
                 <th>Gender</th>
                 <th>Last Sent Mail</th>
+                <th>Send Mail</th>
             </thead> 
             <tbody id="connectedPlayersBody">
             </tbody> 
@@ -447,5 +448,20 @@
           </button>
           <br>
           <hr/>
+          <div class="ui modal fullscreen" id="mail-modal" data-pid="">
+            <div class="header">
+              Send Player Mail
+            </div>
+            <div class="content">
+                <select class="ui fluid search selection dropdown mail-words" id="mail-words" multiple="" onchange="limitMailSelections()">
+                    <div class="text"></div>
+                    <i class="dropdown icon"></i>
+                </select>
+            </div>
+            <div class="actions">
+                <div class="ui cancel button">Cancel</div>
+                <div class="ui approve button" onclick="postModMail()">Send</div>
+            </div>
+          </div>
     </body>
 </html>

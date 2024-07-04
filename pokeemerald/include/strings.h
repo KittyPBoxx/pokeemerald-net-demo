@@ -1301,6 +1301,10 @@ extern const u8 gText_TrainerHill2F[];
 extern const u8 gText_TrainerHill3F[];
 extern const u8 gText_TrainerHill4F[];
 
+// Network strings
+extern const u8 gText_NetMailSend[];
+extern const u8 gText_NetMailRead[];
+
 // Cable Club multichoice text
 extern const u8 CableClub_Text_TradeUsingLinkCable[];
 extern const u8 CableClub_Text_BattleUsingLinkCable[];

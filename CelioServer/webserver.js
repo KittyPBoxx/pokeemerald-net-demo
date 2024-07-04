@@ -93,6 +93,15 @@ class WebServerHelper {
             response.end(JSON.stringify({'result': 'Message Sent'}));
         });
 
+        app.post('/post-mod-mail', jsonParser, function(request, response) {
+            LOG.log('POST to update mod mail');
+            LOG.log(JSON.stringify(request.body));
+            response.writeHead(200, {'Content-Type': 'text/html'})
+            tcpRequestHandler.clientList.get(request.body.id).modMail = request.body.mail;
+            LOG.log("New Mail Sent to " + request.body.id)
+            response.end(JSON.stringify({'result': 'Data Updated'}));
+        });
+
         app.use(express.static(baseDirectory));
         
         var server = app.listen(port, function () {

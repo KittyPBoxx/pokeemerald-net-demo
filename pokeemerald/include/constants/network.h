@@ -112,5 +112,7 @@
 #define NET_CONN_START_EGG_FUNC         3
 #define NET_CONN_TRADE_FUNC             4
 #define NET_CONN_RETRY_TRADE_FUNC       5
+#define NET_CONN_POST_MAIL              6
+#define NET_CONN_READ_MAIL              7
 
 #endif //GUARD_CONSTANTS_NETWORK_H

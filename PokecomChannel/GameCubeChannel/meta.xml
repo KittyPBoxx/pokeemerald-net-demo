@@ -2,7 +2,7 @@
 <app version="1">
   <name>Pokecom Channel - GC</name>
   <coder>KittyPBoxx</coder>
-  <version>0.1.2</version>
+  <version>0.1.3</version>
   <release_date>20240531135633</release_date>
   <short_description>Pokecom Channel - GC</short_description> 
   <long_description>A Gamecube port of Pokecom Channel (for Wii) designed to give gen 3 games a network connection.</long_description> 
