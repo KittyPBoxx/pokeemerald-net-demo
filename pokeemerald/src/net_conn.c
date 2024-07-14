@@ -1178,13 +1178,16 @@ static void Task_PostMailProcess(u8 taskId)
             }
             else 
             {
-                for (i = 0; i < MAIL_COUNT; i++)
+                gStringVar3[8] = gSaveBlock1Ptr->mail[mailId].itemId >> 8;
+                gStringVar3[9] = gSaveBlock1Ptr->mail[mailId].itemId & 0xFF;
+
+                for (i = 0; i < MAIL_WORDS_COUNT; i++)
                 {
-                    gStringVar3[8 + i] = gSaveBlock1Ptr->mail[mailId].words[i] >> 8;
-                    gStringVar3[8 + i + 1] = gSaveBlock1Ptr->mail[mailId].words[i + 1] & 0xFF;
+                    gStringVar3[8 + 2 + (2 * i)] = gSaveBlock1Ptr->mail[mailId].words[i] >> 8;
+                    gStringVar3[8 + 2 + (2 * i) + 1] = gSaveBlock1Ptr->mail[mailId].words[i] & 0xFF;
                 }
 
-                configureSendRecvMgrChunked(NET_CONN_SCH2_REQ, (vu32 *) &gStringVar3[0], 8 + (2* 9), NET_CONN_STATE_SEND, POST_MAIL_TRANSMIT_REQUEST, MINIMUM_CHUNK_SIZE);
+                configureSendRecvMgrChunked(NET_CONN_SCH2_REQ, (vu32 *) &gStringVar3[0], 8 + 2 + (2 * 9), NET_CONN_STATE_SEND, POST_MAIL_TRANSMIT_REQUEST, MINIMUM_CHUNK_SIZE);
             }
 
             break;
@@ -1193,7 +1196,7 @@ static void Task_PostMailProcess(u8 taskId)
             sSendRecvMgr.disableChecks = TRUE; 
             sSendRecvMgr.retryPoint = POST_MAIL_TRANSMIT_REQUEST;
             CpuFill32(0, &gStringVar3, sizeof(gStringVar3)); 
-            configureSendRecvMgr(NET_CONN_TCH2_REQ, 0, 8 + (2* 9), NET_CONN_STATE_SEND, POST_MAIL_WAIT_FOR_SERVER);
+            configureSendRecvMgr(NET_CONN_TCH2_REQ, 0, 8 + 2 + (2 * 9), NET_CONN_STATE_SEND, POST_MAIL_WAIT_FOR_SERVER);
             break;
 
         case POST_MAIL_WAIT_FOR_SERVER:
@@ -1322,15 +1325,14 @@ static void Task_ReadMailProcess(u8 taskId)
             {
                 sSendRecvMgr.retryPoint = DOWNLOAD_MART_RECEIVE_DATA;
             }
-            // 8 byte player name + 9 * 16-bit easy chat words
-            configureSendRecvMgrChunked(NET_CONN_RCHF0_REQ, (vu32 *) &gStringVar3[0], 8 + (9 * 2), NET_CONN_STATE_RECEIVE, READ_MAIL_FINISH, MINIMUM_CHUNK_SIZE);
+            // 8 byte player name + mail type + 9 * 16-bit easy chat words
+            configureSendRecvMgrChunked(NET_CONN_RCHF0_REQ, (vu32 *) &gStringVar3[0], 8 + 2 + (9 * 2), NET_CONN_STATE_RECEIVE, READ_MAIL_FINISH, MINIMUM_CHUNK_SIZE);
             break;
 
         case READ_MAIL_FINISH:
         default:
         {
             u32 i;
-            struct Mail mail;
 
             if (gStringVar3[0] == 0 && gStringVar3[1] == 0)
             {
@@ -1345,27 +1347,32 @@ static void Task_ReadMailProcess(u8 taskId)
             else 
             {
                 // gSpecialVar_0x8003 = 2 - New Mail Message
+                gSpecialVar_0x8003 = 2;
+
+                for (i = 0; i < (0x20 + 1); i++)
+                    gStringVar4[i] = 0;
 
                 // /*0x00*/ u16 words[MAIL_WORDS_COUNT];
                 // /*0x12*/ u8 playerName[PLAYER_NAME_LENGTH + 1];
                 // /*0x1A*/ u8 trainerId[TRAINER_ID_LENGTH];
                 // /*0x1E*/ u16 species;
                 // /*0x20*/ u16 itemId;
-                gSpecialVar_0x8003 = 2;
 
-                for (i = 0; i < MAIL_COUNT; i++)
+                // Use gStringVar4 to store the mail data then cast it to the mail struct 
+                for (i = 0; i < MAIL_WORDS_COUNT; i++)
                 {
-                    mail.words[i] = gStringVar3[8 + i] >> 8;
-                    mail.words[i + 1] = gStringVar3[8 + i + 1] & 0xFF;
+                    gStringVar4[(2 * i)] = gStringVar3[8 + 2 + (2 * i) + 1];
+                    gStringVar4[(2 * i) + 1] = gStringVar3[8 + 2 + (2 * i)];
+
                 }
 
                 for (i = 0; i < PLAYER_NAME_LENGTH; i++)
-                    mail.playerName[i] = gStringVar3[i];
-                    
-                mail.itemId = gSpecialVar_ItemId;
-                mail.species = SPECIES_UNOWN_EMARK;
-                ReadMail(&mail, CB2_ReturnToField, TRUE);
+                    gStringVar4[i + 0x12] = gStringVar3[i];
 
+                gStringVar4[i + 0x12 + 1] = EOS;
+                
+                gStringVar4[0x20] = gStringVar3[8 + 1];
+                gStringVar4[0x20 + 1] = gStringVar3[8];
             }
 
             sSendRecvMgr.state = NET_CONN_STATE_DONE;
@@ -1383,4 +1390,7 @@ static void Task_EndReadMailConnection(u8 taskId)
     StopFieldMessage();
     ScriptContext_Enable();
     DestroyTask(taskId);
+
+    if (gSpecialVar_0x8003 == 2)
+        ReadMail((struct Mail *) &gStringVar4[0], CB2_ReturnToField, TRUE);
 }

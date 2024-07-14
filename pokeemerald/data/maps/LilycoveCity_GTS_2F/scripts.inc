@@ -152,6 +152,7 @@ LilycoveCity_GTS_F2_EventScript_PostMail::
 	goto_if_eq VAR_0x8003, 1, LilycoveCity_GTS_F2_EventScript_MonHadNoMail
 	message LilycoveCity_GTS_F2_Text_MailSent
 	waitmessage
+	waitbuttonpress
 	releaseall
 	end
 
@@ -160,7 +161,7 @@ LilycoveCity_GTS_F2_EventScript_ReadMail::
 	special CallNetworkFunction
 	waitstate
 	goto_if_eq VAR_0x8003, 0, LilycoveCity_GTS_F2_EventScript_ConnectionEnded
-	goto_if_eq VAR_0x8003, 1, LilycoveCity_GTS_F2_Text_NoMailFound
+	goto_if_eq VAR_0x8003, 1, LilycoveCity_GTS_F2_EventScript_NoMailFound
 	releaseall
 	end
 

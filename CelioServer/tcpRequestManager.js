@@ -120,7 +120,7 @@ class TcpRequestHelper {
                 "sentTime" : Date.now(),
                 "friendKey": friendKey,
                 "name": clientList.get(conn.id).name,
-                "message": data.slice(5, 5 + (2 * 9)) // 4, 2 Byte easy chat words
+                "message": data.slice(5, 5 + 2 + (2 * 9)) // 2 Byte mail type + 9, 2 Byte easy chat words
             }
 
             sendMessage(conn, new Message(0xF0, 0x2, new Uint8Array([200, isUsingFriendCode ? 1 : 0])));
@@ -145,10 +145,12 @@ class TcpRequestHelper {
 
             var modMail = clientList.get(conn.id).modMail;
             if (modMail) {
-                var mailHex = new Uint8Array(8 + (2 * 9));
+                var mailHex = new Uint8Array(8 + 2 + (2 * 9));
                 mailHex.set(new Uint8Array(StringHelper.convertMessageToHex("ADMIN")), 0);
-                mailHex.set(modMail, 8);
-                sendMessage(conn, new Message(0xF0, 8 + (2 * 9), mailHex)); 
+                mailHex[8] = 0x00;
+                mailHex[9] = 0x7B;
+                mailHex.set(modMail, 8 + 2);
+                sendMessage(conn, new Message(0xF0, 8 + 2 + (2 * 9), mailHex)); 
                 clientList.get(conn.id).modMail = null; 
                 return;
             }
@@ -160,16 +162,14 @@ class TcpRequestHelper {
                                                       .filter(m => m.sentTime > lastMailCheckTime)
                                                       .sort((a, b) => b.getTime() - a.getTime())[0];
 
-            console.log("MAIL" + JSON.stringify(nextMessage));
-
             if (nextMessage) {
 
                 clientList.get(conn.id).lastMailCheckTime = nextMessage.sentTime;
-                var mailHex = new Uint8Array(8 + (2 * 9)); // Player name + 9 easy chat words
+                var mailHex = new Uint8Array(8 + 2 + (2 * 9)); // Player name + mail type + 9 easy chat words
                 mailHex.set(new Uint8Array(StringHelper.convertMessageToHex(nextMessage.name)), 0);
                 mailHex.set(nextMessage.message, 8);
                 
-                sendMessage(conn, new Message(0xF0, 8 + (2 * 9), mailHex)); 
+                sendMessage(conn, new Message(0xF0, 8 + 2 + (2 * 9), mailHex)); 
 
             } else  {
                 sendMessage(conn, new Message(0xF0, 0x2, new Uint8Array([0xFF, 0xFF]))); // No new messages

@@ -79,20 +79,7 @@ class WebServerHelper {
             LOG.log("New Mart Data " + JSON.stringify(marketHelper.getMart()))
             response.end(JSON.stringify({'result': 'Data Updated'}));
         });
-
-        app.post('/send-message', jsonParser, function(request, response) {
-            LOG.log('POST to send message');
-            LOG.log(request.body);
-            response.writeHead(200, {'Content-Type': 'text/html'})
-
-            let clientId = request.body.clientId;
-            let message = request.body.message;
-            tcpRequestHandler.clientList.get(clientId).messages.push(message);
-            
-            LOG.log("Send message" + JSON.stringify(trainerHelper.getBattle1Pokemon()))
-            response.end(JSON.stringify({'result': 'Message Sent'}));
-        });
-
+        
         app.post('/post-mod-mail', jsonParser, function(request, response) {
             LOG.log('POST to update mod mail');
             LOG.log(JSON.stringify(request.body));
