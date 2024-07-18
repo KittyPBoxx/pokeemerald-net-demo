@@ -1,0 +1,60 @@
+CeladonCity_NetworkEnthusiastHouse_BF1_MapScripts::
+	.byte 0
+
+CeladonCity_NetworkEnthusiastHouse_BF1_EventScript_Trade::
+	lockall
+	textcolor NPC_TEXT_COLOR_FEMALE
+	faceplayer
+	msgbox CeladonCity_NetworkEnthusiastHouse_BF1_Text_PlaceHolder, MSGBOX_NPC
+	releaseall
+	end
+
+CeladonCity_NetworkEnthusiastHouse_BF1_EventScript_Battle::
+	lockall
+	textcolor NPC_TEXT_COLOR_FEMALE
+	faceplayer
+	msgbox CeladonCity_NetworkEnthusiastHouse_BF1_Text_PlaceHolder, MSGBOX_NPC
+	releaseall
+	end
+
+CeladonCity_NetworkEnthusiastHouse_BF1_EventScript_Mail::
+	lockall
+	textcolor NPC_TEXT_COLOR_MALE
+	faceplayer
+	msgbox CeladonCity_NetworkEnthusiastHouse_BF1_Text_PlaceHolder, MSGBOX_NPC
+	releaseall
+	end
+
+CeladonCity_NetworkEnthusiastHouse_BF1_EventScript_Mart::
+	lockall
+	textcolor NPC_TEXT_COLOR_MALE
+	faceplayer
+	msgbox CeladonCity_NetworkEnthusiastHouse_BF1_Text_StartDownloadMart, MSGBOX_YESNO
+	goto_if_eq VAR_RESULT, YES, CeladonCity_NetworkEnthusiastHouse_BF1_EventScript_NetShop
+	goto CeladonCity_NetworkEnthusiastHouse_BF1_EventScript_DontConnect
+
+
+CeladonCity_NetworkEnthusiastHouse_BF1_EventScript_GiftEgg::
+	lockall
+	textcolor NPC_TEXT_COLOR_MALE
+	faceplayer
+	msgbox CeladonCity_NetworkEnthusiastHouse_BF1_Text_PlaceHolder, MSGBOX_NPC
+	releaseall
+	end
+
+CeladonCity_NetworkEnthusiastHouse_BF1_EventScript_NetShop::
+	setvar VAR_0x8004, NET_CONN_START_MART_FUNC
+	special CallNetworkFunction
+	waitstate
+	goto_if_eq VAR_0x8003, 0, CeladonCity_NetworkEnthusiastHouse_BF1_EventScript_ConnectionEnded
+	closemessage
+	releaseall
+	end
+
+CeladonCity_NetworkEnthusiastHouse_BF1_EventScript_DontConnect::
+	release
+	end
+
+CeladonCity_NetworkEnthusiastHouse_BF1_EventScript_ConnectionEnded::
+	msgbox CeladonCity_NetworkEnthusiastHouse_BF1_Text_ConnectionEnded, MSGBOX_NPC
+	end

@@ -1,0 +1,4 @@
+gMultibootStart
+gMultibootStatus
+gMultibootSize
+gMultibootParam
