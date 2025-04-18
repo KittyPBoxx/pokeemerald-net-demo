@@ -11,6 +11,14 @@ var LOG = require('./log.js');
 const WEB_SERVER_PORT = 8081;
 const TCP_SERVER_PORT = 9000;
 
+process.on('uncaughtException', (err) => {
+  LOG.error('Uncaught Exception:', err);
+});
+
+process.on('unhandledRejection', (reason) => {
+  LOG.error('Unhandled Rejection:', reason);
+});
+
 const serverBanner = `
  ██████╗███████╗██╗     ██╗ ██████╗      ███████╗███████╗██████╗ ██╗   ██╗███████╗██████╗ 
 ██╔════╝██╔════╝██║     ██║██╔═══██╗     ██╔════╝██╔════╝██╔══██╗██║   ██║██╔════╝██╔══██╗

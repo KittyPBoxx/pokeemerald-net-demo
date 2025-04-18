@@ -288,7 +288,23 @@ class RequestHandler {
      *    clientList - map of all the other connected clients
      */
     registerHandler(identifier, handlerFunction) {
-      this.handlers.set(identifier.join(""), handlerFunction);
+        const wrapped = (conn, data, clientList) => {
+            try {
+              handlerFunction(conn, data, clientList);
+            } catch (err) {
+              LOG.error("Handler error for conn", conn.id, err);
+              try {
+                conn.write(new Uint8Array(1));
+              } catch {}
+              try {
+                this.closeConnection(conn);
+                conn.destroy();
+              } catch (e) {
+                LOG.error("Error closing connection", e);
+              }
+            }
+          };
+          this.handlers.set(identifier.join(""), wrapped);
     }
   
     handleRequest(conn, data) {
